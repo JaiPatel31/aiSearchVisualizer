@@ -2,13 +2,25 @@ package com.jaiPatel.aisearch.algorithms;
 
 import com.jaiPatel.aisearch.graph.Graph;
 import com.jaiPatel.aisearch.graph.Node;
+import com.jaiPatel.aisearch.heuristics.Heuristic;
 
 import java.util.*;
 
-public class BFS implements SearchAlgorithm {
+public class BestFirstSearch implements SearchAlgorithm {
+
+    private final Heuristic heuristic;
+
+    public BestFirstSearch(Heuristic heuristic) {
+        this.heuristic = heuristic;
+    }
+
     @Override
     public SearchResult solve(Graph graph, Node start, Node goal) {
-        Queue<Node> frontier = new LinkedList<>();
+        // Priority queue sorted by h(n)
+        PriorityQueue<Node> frontier = new PriorityQueue<>(
+                Comparator.comparingDouble(n -> heuristic.estimate(n, goal))
+        );
+
         Map<Node, Node> parentMap = new HashMap<>();
         Set<Node> explored = new HashSet<>();
 
@@ -29,6 +41,7 @@ public class BFS implements SearchAlgorithm {
                 }
                 Collections.reverse(path);
 
+                // cost = number of steps (edges in path)
                 return new SearchResult(path, path.size() - 1, nodesExpanded, explored.size());
             }
 
@@ -42,6 +55,8 @@ public class BFS implements SearchAlgorithm {
             }
         }
 
+        // If no path was found
         return new SearchResult(Collections.emptyList(), Double.POSITIVE_INFINITY, nodesExpanded, explored.size());
     }
 }
+

@@ -5,43 +5,49 @@ import com.jaiPatel.aisearch.graph.Node;
 
 import java.util.*;
 
-public class BFS implements SearchAlgorithm {
+public class DFS implements SearchAlgorithm {
     @Override
     public SearchResult solve(Graph graph, Node start, Node goal) {
-        Queue<Node> frontier = new LinkedList<>();
+        Deque<Node> stack = new ArrayDeque<>();
         Map<Node, Node> parentMap = new HashMap<>();
         Set<Node> explored = new HashSet<>();
 
-        frontier.add(start);
+        stack.push(start);
         explored.add(start);
 
         int nodesExpanded = 0;
 
-        while (!frontier.isEmpty()) {
-            Node current = frontier.poll();
+        while (!stack.isEmpty()) {
+            Node current = stack.pop();
             nodesExpanded++;
 
             if (current.equals(goal)) {
-                // Reconstruct path
+                // reconstruct path
                 List<Node> path = new ArrayList<>();
                 for (Node n = goal; n != null; n = parentMap.get(n)) {
                     path.add(n);
                 }
                 Collections.reverse(path);
-
                 return new SearchResult(path, path.size() - 1, nodesExpanded, explored.size());
             }
 
+            // Push neighbors in reverse order (so left-most gets explored first)
+            List<Node> neighbors = new ArrayList<>();
             for (var edge : graph.getNeighbors(current)) {
-                Node neighbor = edge.getTo();
+                neighbors.add(edge.getTo());
+            }
+            Collections.reverse(neighbors);
+
+            for (Node neighbor : neighbors) {
                 if (!explored.contains(neighbor)) {
-                    frontier.add(neighbor);
+                    stack.push(neighbor);
                     explored.add(neighbor);
                     parentMap.put(neighbor, current);
                 }
             }
         }
 
+        // If no path found
         return new SearchResult(Collections.emptyList(), Double.POSITIVE_INFINITY, nodesExpanded, explored.size());
     }
 }
