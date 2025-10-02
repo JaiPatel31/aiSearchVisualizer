@@ -3,6 +3,7 @@ package com.jaiPatel.aisearch.graph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -25,7 +26,7 @@ class GraphTest {
 
     @Test
     void testAddAndGetNodes() {
-        Set<Node> nodes = graph.getNodes();
+        Collection<Node> nodes = graph.getNodes();
         assertTrue(nodes.contains(a));
         assertTrue(nodes.contains(b));
         assertTrue(nodes.contains(c));
