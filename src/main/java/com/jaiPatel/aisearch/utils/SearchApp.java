@@ -64,7 +64,7 @@ public class SearchApp {
 
         int algoChoice = Integer.parseInt(sc.nextLine());
         SearchAlgorithm algo;
-        Heuristic heuristic = new EuclideanHeuristic(); // default for GBFS/A*
+        Heuristic heuristic = new EuclideanHeuristic(); // default heuristic for GBFS/A*
 
         switch (algoChoice) {
             case 1 -> algo = new BFS();
@@ -73,14 +73,21 @@ public class SearchApp {
             case 4 -> algo = new BestFirstSearch(heuristic);
             case 5 -> algo = new AStarSearch(heuristic);
             default -> {
-                System.err.println("Invalid choice.");
+                System.err.println("❌ Invalid choice.");
                 return;
             }
         }
 
         // Run search
-        SearchResult result = algo.solve(graph, start, goal);
+        SearchResult result;
+        if (algo instanceof AbstractSearchAlgorithm) {
+            // use observer version
+            result = ((AbstractSearchAlgorithm) algo).solve(graph, start, goal, null);
+        } else {
+            result = algo.solve(graph, start, goal, null);
+        }
 
+        // Display results
         System.out.println("\n=== Search Results ===");
         System.out.println("Algorithm: " + algo.getClass().getSimpleName());
         System.out.println("Path: " + result.getPath());
@@ -89,7 +96,7 @@ public class SearchApp {
         System.out.println("Explored Set Size: " + result.getExploredSize());
     }
 
-    // Helper for random graph
+    // Helper to create random graph
     private static Graph createRandomGraph() {
         System.out.println("Enter number of nodes (N): ");
         int n = Integer.parseInt(sc.nextLine());

@@ -1,8 +1,11 @@
 package com.jaiPatel.aisearch.graph;
 
 import java.io.IOException;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class GraphLoaderSet1 {
 
@@ -19,15 +22,14 @@ public class GraphLoaderSet1 {
             if (parts.length < 3) continue;
 
             String name = parts[0].trim();
-            int x = (int) Double.parseDouble(parts[1]);
-            int y = (int) Double.parseDouble(parts[2]);
+            double lat = Double.parseDouble(parts[1].trim());
+            double lon = Double.parseDouble(parts[2].trim());
 
-            Node node = new Node(name, x, y);
+            Node node = new Node(name, lat, lon);
             graph.addNode(node);
             nodeMap.put(name, node);
 
-            // 👇 Debug print
-            System.out.println(" - Added city: " + name + " (x=" + x + ", y=" + y + ")");
+            System.out.println(" - Added city: " + name + " (lat=" + lat + ", lon=" + lon + ")");
         }
 
         // Step 2: Read adjacencies.txt
@@ -49,7 +51,6 @@ public class GraphLoaderSet1 {
                 graph.addEdge(n1, n2, dist);
                 graph.addEdge(n2, n1, dist);
 
-                // 👇 Debug print
                 System.out.println(" - Connected " + city1 + " <-> " + city2 + " (" + dist + ")");
             } else {
                 System.err.println(" ⚠️ Road skipped: " + city1 + " <-> " + city2 +
@@ -61,11 +62,9 @@ public class GraphLoaderSet1 {
         return graph;
     }
 
-
-
-    // Replace Euclidean with Haversine
+    // Haversine formula to calculate distance between two coordinates in km
     private static double haversine(double lat1, double lon1, double lat2, double lon2) {
-        double R = 6371.0; // Earth radius in km
+        final double R = 6371.0; // Earth radius in km
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
 
@@ -76,8 +75,8 @@ public class GraphLoaderSet1 {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
-
 }
+
 
 
 
