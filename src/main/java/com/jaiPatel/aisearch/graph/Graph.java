@@ -17,7 +17,17 @@ public class Graph {
         addNode(to);
         adjacencyList.get(from).add(new Edge(from, to, weight));
     }
-
+    public double getEdgeWeight(Node from, Node to) {
+        List<Edge> edges = adjacencyList.get(from);
+        if (edges != null) {
+            for (Edge edge : edges) {
+                if (edge.getTo().equals(to)) {
+                    return edge.getCost();
+                }
+            }
+        }
+        return 0.0; // or throw an exception if no edge exists
+    }
     public List<Edge> getNeighbors(Node node) {
         return adjacencyList.getOrDefault(node, Collections.emptyList());
     }
