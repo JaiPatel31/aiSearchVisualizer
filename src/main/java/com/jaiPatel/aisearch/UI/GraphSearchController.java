@@ -10,6 +10,10 @@ import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
+import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.control.Label;
 
 import java.util.Collection;
 import java.util.List;
@@ -252,18 +256,28 @@ public class GraphSearchController {
         });
     }
     private VBox createLegendPanel() {
-        Label title = new Label("🎨 Legend");
+        Label title = new Label("Legend");
         title.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
 
-        Label current = new Label("🟠 Current Node");
-        Label frontier = new Label("🟡 Frontier (Open List)");
-        Label visited = new Label("🟢 Visited (Explored)");
-        Label goal = new Label("🔴 Goal Node");
-        Label path = new Label("🟣 Final Path");
-        Label blocked = new Label("⚫ Blocked Node");
+        VBox box = new VBox(5);
+        box.getChildren().add(title);
 
-        VBox box = new VBox(5, title, current, frontier, visited, goal, path, blocked);
+        box.getChildren().add(createLegendItem(Color.ORANGE, "Current Node"));
+        box.getChildren().add(createLegendItem(Color.YELLOW, "Frontier (Open List)"));
+        box.getChildren().add(createLegendItem(Color.GREEN, "Visited (Explored)"));
+        box.getChildren().add(createLegendItem(Color.RED, "Goal Node"));
+        box.getChildren().add(createLegendItem(Color.PURPLE, "Final Path"));
+        box.getChildren().add(createLegendItem(Color.BLACK, "Blocked Node"));
+
         box.setStyle("-fx-border-color: lightgray; -fx-border-width: 1px; -fx-padding: 10px;");
         return box;
+    }
+
+    private HBox createLegendItem(Color color, String text) {
+        Rectangle rect = new Rectangle(15, 15, color);
+        Label label = new Label(text);
+        label.setStyle("-fx-padding: 0 0 0 5px;"); // small space between rectangle and text
+        HBox hbox = new HBox(rect, label);
+        return hbox;
     }
 }
