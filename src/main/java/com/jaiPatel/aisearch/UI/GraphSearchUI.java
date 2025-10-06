@@ -9,27 +9,33 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.scene.layout.BorderPane;
 
+/**
+ * Entry point for the AI Search Visualizer.
+ * Now supports both loading static graphs and generating random graphs.
+ */
 public class GraphSearchUI extends Application {
 
     private Graph graph;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        // Load graph
+        // Load default graph (user can later switch to random mode in UI)
         graph = GraphLoaderSet1.load(
                 "C:\\Users\\Jai Patel\\Desktop\\aiSearchVisualizer\\src\\main\\resources\\coordinates.csv",
                 "C:\\Users\\Jai Patel\\Desktop\\aiSearchVisualizer\\src\\main\\resources\\Adjacencies.txt"
         );
 
-        // Choose algorithm (BFS for now)
+        // Default algorithm: BFS
         SearchAlgorithm algorithm = new BFS();
 
-        // Create controller
+        // Create and attach controller
         GraphSearchController controller = new GraphSearchController();
         BorderPane root = controller.createUI(graph, algorithm);
 
-        // Show scene
-        Scene scene = new Scene(root, 1000, 600);
+        // Configure scene
+        Scene scene = new Scene(root, 1200, 700);
+
+
         primaryStage.setTitle("AI Search Visualizer");
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -39,3 +45,4 @@ public class GraphSearchUI extends Application {
         launch(args);
     }
 }
+

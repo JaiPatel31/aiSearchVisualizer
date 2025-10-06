@@ -14,7 +14,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.control.Label;
-
+import javafx.scene.layout.GridPane;
 import java.util.Collection;
 import java.util.List;
 
@@ -40,7 +40,9 @@ public class GraphSearchController {
     private final Button restartButton = new Button("Restart");
     private final Slider speedSlider = new Slider(100, 2000, 500); // ms per step
     private final Label metricsLabel = new Label();
-
+    private final ComboBox<String> graphModeBox = new ComboBox<>();
+    private final Button generateGraphButton = new Button("Generate Random Graph");
+    private final ComboBox<String> heuristicBox = new ComboBox<>();
 
     //metrics panel
     private Label nodesExpandedLabel = new Label("Nodes Expanded: 0");
@@ -67,7 +69,7 @@ public class GraphSearchController {
 
         // Add algorithm selection
         algorithmBox.getItems().addAll("BFS", "DFS", "IDDFS", "Best-First Search", "A*");
-        algorithmBox.setValue("A*"); // default
+        algorithmBox.setValue("BFS"); // default
 
         // Control actions
         playButton.setOnAction(e -> {
@@ -99,10 +101,24 @@ public class GraphSearchController {
         restartButton.setOnAction(e -> restartSearch());
         algorithmBox.setOnAction(e -> updateAlgorithm());
 
+        // --- Random Graph Controls ---
+        graphModeBox.getItems().addAll("Use Existing Graph", "Generate Random Graph");
+        graphModeBox.setValue("Use Existing Graph");
+
+        generateGraphButton.setOnAction(e -> showRandomGraphPopup());
+
+// --- Heuristic Controls ---
+        heuristicBox.getItems().addAll("Euclidean", "Manhattan", "Zero (Uninformed)");
+        heuristicBox.setValue("Euclidean");
+        heuristicBox.setDisable(true); // Only active for A* or Best-First
+
         VBox controls = new VBox(10,
+                new Label("Graph Mode:"), graphModeBox,
+                generateGraphButton,
                 new Label("Start Node:"), startBox,
                 new Label("Goal Node:"), goalBox,
                 new Label("Search Algorithm:"), algorithmBox,
+                new Label("Heuristic:"), heuristicBox,
                 playButton, pauseButton, stepButton, restartButton,
                 new Label("Speed (ms/step):"), speedSlider,
                 metricsLabel
@@ -143,15 +159,32 @@ public class GraphSearchController {
     // --- Algorithm Selection ---
     private void updateAlgorithm() {
         String selected = algorithmBox.getValue();
+
         switch (selected) {
-            case "BFS" -> algorithm = new BFS();
-            case "DFS" -> algorithm = new DFS();
-            case "IDDFS" -> algorithm = new IDDFS();
-            case "Best-First Search" -> algorithm = new BestFirstSearch(new EuclideanHeuristic());
-            case "A*" -> algorithm = new AStarSearch(new EuclideanHeuristic());
+            case "BFS" -> {
+                algorithm = new BFS();
+                heuristicBox.setDisable(true);
+            }
+            case "DFS" -> {
+                algorithm = new DFS();
+                heuristicBox.setDisable(true);
+            }
+            case "IDDFS" -> {
+                algorithm = new IDDFS();
+                heuristicBox.setDisable(true);
+            }
+            case "Best-First Search" -> {
+                heuristicBox.setDisable(false);
+                algorithm = new BestFirstSearch(getSelectedHeuristic());
+            }
+            case "A*" -> {
+                heuristicBox.setDisable(false);
+                algorithm = new AStarSearch(getSelectedHeuristic());
+            }
             default -> showAlert("Unknown algorithm: " + selected);
         }
     }
+
 
     // --- Initialize and Start ---
     private void startSearch() {
@@ -279,5 +312,68 @@ public class GraphSearchController {
         label.setStyle("-fx-padding: 0 0 0 5px;"); // small space between rectangle and text
         HBox hbox = new HBox(rect, label);
         return hbox;
+    }
+
+    private Heuristic getSelectedHeuristic() {
+        return switch (heuristicBox.getValue()) {
+            case "Manhattan" -> new ManhattanHeuristic();
+            case "Zero (Uninformed)" ->new ZeroHeuristic(); // Lambda for uninformed search
+            case "Euclidean" -> new EuclideanHeuristic();
+            case "Chevyshev" -> new ChebyshevHeuristic();
+            default -> new EuclideanHeuristic();
+        };
+    }
+
+    private void showRandomGraphPopup() {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Random Graph Generator");
+
+        TextField nodesField = new TextField("10");
+        TextField branchingField = new TextField("3");
+        TextField minWeightField = new TextField("1");
+        TextField maxWeightField = new TextField("10");
+        TextField seedField = new TextField(String.valueOf(System.currentTimeMillis()));
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new Label("Number of Nodes:"), 0, 0);
+        grid.add(nodesField, 1, 0);
+        grid.add(new Label("Branching Factor:"), 0, 1);
+        grid.add(branchingField, 1, 1);
+        grid.add(new Label("Min Edge Weight:"), 0, 2);
+        grid.add(minWeightField, 1, 2);
+        grid.add(new Label("Max Edge Weight:"), 0, 3);
+        grid.add(maxWeightField, 1, 3);
+        grid.add(new Label("Seed:"), 0, 4);
+        grid.add(seedField, 1, 4);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.setResultConverter(button -> {
+            if (button == ButtonType.OK) {
+                int n = Integer.parseInt(nodesField.getText());
+                int b = Integer.parseInt(branchingField.getText());
+                int minW = Integer.parseInt(minWeightField.getText());
+                int maxW = Integer.parseInt(maxWeightField.getText());
+                long seed = Long.parseLong(seedField.getText());
+
+                this.graph = RandomGraphGenerator.generate(n, b, minW, maxW, seed);
+                this.visualizer = new GraphStreamVisualizer(graph);
+                // Replace the displayed graph
+                BorderPane root = (BorderPane) playButton.getScene().getRoot();
+                root.setCenter(visualizer.getView());
+
+                // Refresh visuals and controls
+                visualizer.resetGraph();
+                startBox.getItems().setAll(graph.getNodes().stream().map(Node::getName).toList());
+                goalBox.getItems().setAll(graph.getNodes().stream().map(Node::getName).toList());
+
+            }
+            return null;
+        });
+
+        dialog.showAndWait();
     }
 }
