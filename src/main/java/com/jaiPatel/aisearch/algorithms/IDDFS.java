@@ -1,179 +1,118 @@
 package com.jaiPatel.aisearch.algorithms;
 
-import com.jaiPatel.aisearch.graph.Graph;
-import com.jaiPatel.aisearch.graph.Node;
-
-import java.util.*;
-
-import java.util.*;
-
+import com.jaiPatel.aisearch.graph.*;
 import java.util.*;
 
 public class IDDFS extends AbstractSearchAlgorithm {
 
+    private Graph graph;
+    private Node start, goal;
+    private SearchObserver observer;
+
+    private int currentDepth = 0;
+    private boolean finished = false;
+    private boolean initialized = false;
+
+    private Deque<NodeDepth> stack;
+    private Set<Node> explored;
+    private Map<Node, Node> parentMap;
+
+    private long startTime;
+    private long beforeMem;
+
+    private static class NodeDepth {
+        Node node;
+        int depth;
+        NodeDepth(Node n, int d) { node = n; depth = d; }
+    }
+
     @Override
-    public SearchResult solve(Graph graph, Node start, Node goal, SearchObserver observer) {
-        long startTime = System.nanoTime();
-        long beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+    public void initialize(Graph graph, Node start, Node goal, SearchObserver observer) {
+        this.graph = graph;
+        this.start = start;
+        this.goal = goal;
+        this.observer = observer;
 
-        int depth = 0;
-        int totalExpanded = 0;
-        int totalGenerated = 0;
-        int maxFrontierSize = 0;
-        Set<Node> explored = new HashSet<>();
+        resetDepthLimited();
 
-        while (true) {
-            DepthLimitedResult dlr = depthLimitedSearch(graph, start, goal, depth, observer);
-
-            totalExpanded += dlr.nodesExpanded;
-            totalGenerated += dlr.nodesGenerated;
-            explored.addAll(dlr.explored);
-            maxFrontierSize = Math.max(maxFrontierSize, dlr.maxFrontierSize);
-
-            if (dlr.found) {
-                long endTime = System.nanoTime();
-                long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-
-                int solutionDepth = dlr.path.size() - 1;
-
-
-                List<Node> path = dlr.path;
-
-                // Calculate total cost along the path
-                double totalCost = 0.0;
-                for (int i = 0; i < path.size() - 1; i++) {
-                    Node from = path.get(i);
-                    Node to = path.get(i + 1);
-                    totalCost += graph.getEdgeWeight(from, to);
-                }
-
-                return new SearchResult(
-                        dlr.path,
-                        totalCost,
-                        totalExpanded,
-                        totalGenerated,
-                        explored.size(),
-                        maxFrontierSize,
-                        solutionDepth,
-                        (endTime - startTime) / 1_000_000,
-                        (afterMem - beforeMem)
-                );
-            }
-
-            if (!dlr.cutoff) {
-                // No solution
-                long endTime = System.nanoTime();
-                long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-
-                return new SearchResult(
-                        Collections.emptyList(),
-                        Double.POSITIVE_INFINITY,
-                        totalExpanded,
-                        totalGenerated,
-                        explored.size(),
-                        maxFrontierSize,
-                        -1,
-                        (endTime - startTime) / 1_000_000,
-                        (afterMem - beforeMem)
-                );
-            }
-
-            depth++; // increase depth and retry
-        }
+        this.startTime = System.nanoTime();
+        this.beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        this.initialized = true;
+        this.finished = false;
     }
 
-    private DepthLimitedResult depthLimitedSearch(Graph graph, Node start, Node goal, int limit, SearchObserver observer) {
-        Deque<NodeDepthPair> stack = new ArrayDeque<>();
-        Map<Node, Node> parentMap = new HashMap<>();
-        Set<Node> explored = new HashSet<>();
-
-        stack.push(new NodeDepthPair(start, 0));
-        parentMap.put(start, null);
-
-        int nodesExpanded = 0;
-        int nodesGenerated = 0;
-        int maxFrontierSize = stack.size();
-        boolean cutoff = false;
-
-        while (!stack.isEmpty()) {
-            checkControl(); // ✅ pause/resume/stop
-
-            NodeDepthPair ndp = stack.pop();
-            Node current = ndp.node;
-            int depth = ndp.depth;
-            nodesExpanded++;
-            explored.add(current);
-
-            if (observer != null) {
-                // ✅ convert NodeDepthPair frontier → Node collection
-                List<Node> frontierNodes = stack.stream().map(pair -> pair.node).toList();
-                observer.onStep(current, frontierNodes, explored);
-            }
-
-            if (current.equals(goal)) {
-                List<Node> path = reconstructPath(parentMap, goal);
-                return new DepthLimitedResult(true, cutoff, path, nodesExpanded, nodesGenerated, explored, maxFrontierSize);
-            }
-
-            if (depth < limit) {
-                for (var edge : graph.getNeighbors(current)) {
-                    Node neighbor = edge.getTo();
-                    if (!explored.contains(neighbor)) {
-                        stack.push(new NodeDepthPair(neighbor, depth + 1));
-                        parentMap.put(neighbor, current);
-                        nodesGenerated++;
-                    }
-                }
-            } else {
-                cutoff = true; // depth limit reached
-            }
-
-            maxFrontierSize = Math.max(maxFrontierSize, stack.size());
-        }
-
-        return new DepthLimitedResult(false, cutoff, Collections.emptyList(),
-                nodesExpanded, nodesGenerated, explored, maxFrontierSize);
+    private void resetDepthLimited() {
+        this.stack = new ArrayDeque<>();
+        this.explored = new HashSet<>();
+        this.parentMap = new HashMap<>();
+        this.stack.push(new NodeDepth(start, 0));
+        this.parentMap.put(start, null);
     }
 
-    private List<Node> reconstructPath(Map<Node, Node> parentMap, Node goal) {
+    @Override
+    public boolean step() {
+        if (!initialized || finished) return false;
+        if (stack.isEmpty()) {
+            currentDepth++;
+            resetDepthLimited();
+            return true;
+        }
+
+        NodeDepth nd = stack.pop();
+        Node current = nd.node;
+        explored.add(current);
+        nodesExpanded++;
+
+        notifyObserver(observer, current, extractFrontier(), explored, 0, explored.size(), 0, 0, 0);
+
+        if (current.equals(goal)) {
+            finishSearch();
+            return false;
+        }
+
+        if (nd.depth < currentDepth) {
+            for (var edge : graph.getNeighbors(current)) {
+                Node neighbor = edge.getTo();
+                if (!explored.contains(neighbor)) {
+                    stack.push(new NodeDepth(neighbor, nd.depth + 1));
+                    parentMap.put(neighbor, current);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private List<Node> extractFrontier() {
+        List<Node> f = new ArrayList<>();
+        for (NodeDepth nd : stack) f.add(nd.node);
+        return f;
+    }
+
+    private void finishSearch() {
+        finished = true;
+
+        List<Node> path = reconstructPath(parentMap, goal);
+        double totalCost = calculatePathCost(graph, path);
+        observer.onFinish(path, nodesExpanded, totalCost);
+    }
+
+    private List<Node> reconstructPath(Map<Node, Node> parent, Node goal) {
         List<Node> path = new ArrayList<>();
-        for (Node n = goal; n != null; n = parentMap.get(n)) {
-            path.add(n);
-        }
+        for (Node n = goal; n != null; n = parent.get(n)) path.add(n);
         Collections.reverse(path);
         return path;
     }
 
-    // --- Helper classes ---
-    private static class NodeDepthPair {
-        Node node;
-        int depth;
-        NodeDepthPair(Node node, int depth) {
-            this.node = node;
-            this.depth = depth;
-        }
+    private double calculatePathCost(Graph graph, List<Node> path) {
+        double cost = 0;
+        for (int i = 0; i < path.size() - 1; i++)
+            cost += graph.getEdgeWeight(path.get(i), path.get(i + 1));
+        return cost;
     }
 
-    private static class DepthLimitedResult {
-        boolean found;
-        boolean cutoff;
-        List<Node> path;
-        int nodesExpanded;
-        int nodesGenerated;
-        Set<Node> explored;
-        int maxFrontierSize;
-
-        DepthLimitedResult(boolean found, boolean cutoff, List<Node> path,
-                           int nodesExpanded, int nodesGenerated,
-                           Set<Node> explored, int maxFrontierSize) {
-            this.found = found;
-            this.cutoff = cutoff;
-            this.path = path;
-            this.nodesExpanded = nodesExpanded;
-            this.nodesGenerated = nodesGenerated;
-            this.explored = explored;
-            this.maxFrontierSize = maxFrontierSize;
-        }
+    @Override
+    public boolean isFinished() {
+        return finished;
     }
 }
-

@@ -17,6 +17,9 @@ public class Graph {
         addNode(to);
         adjacencyList.get(from).add(new Edge(from, to, weight));
     }
+    public List<Edge> getEdgesFrom(Node node) {
+        return adjacencyList.getOrDefault(node, Collections.emptyList());
+    }
     public double getEdgeWeight(Node from, Node to) {
         List<Edge> edges = adjacencyList.get(from);
         if (edges != null) {
