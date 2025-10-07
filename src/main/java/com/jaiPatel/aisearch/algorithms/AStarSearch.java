@@ -1,113 +1,107 @@
 package com.jaiPatel.aisearch.algorithms;
 
-import com.jaiPatel.aisearch.graph.Graph;
-import com.jaiPatel.aisearch.graph.Node;
-import com.jaiPatel.aisearch.graph.Edge;
-import com.jaiPatel.aisearch.heuristics.Heuristic;
-
-import java.util.*;
-
+import com.jaiPatel.aisearch.graph.*;
+import com.jaiPatel.aisearch.heuristics.*;
 import java.util.*;
 
 public class AStarSearch extends AbstractSearchAlgorithm {
 
     private final Heuristic heuristic;
+    private Graph graph; private Node start, goal; private SearchObserver observer;
 
-    public AStarSearch(Heuristic heuristic) {
-        this.heuristic = heuristic;
-    }
+    private PriorityQueue<Node> frontier;
+    private Set<Node> frontierSet, explored;
+    private Map<Node, Node> parentMap;
+    private Map<Node, Double> gScores;
+
+    private boolean initialized = false, finished = false;
+    private int nodesGenerated = 0, maxFrontierSize = 0, maxFootprintSize = 0;
+    private long startTime, beforeMem;
+
+    public AStarSearch(Heuristic heuristic) { this.heuristic = heuristic; }
 
     @Override
-    public SearchResult solve(Graph graph, Node start, Node goal, SearchObserver observer) {
-        long startTime = System.nanoTime();
-        long beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-
-        Map<Node, Node> parentMap = new HashMap<>();
-        Map<Node, Double> gScores = new HashMap<>(); // cost from start to node
-        Set<Node> explored = new HashSet<>();
-
-        PriorityQueue<Node> frontier = new PriorityQueue<>(
-                Comparator.comparingDouble(n -> gScores.getOrDefault(n, Double.POSITIVE_INFINITY)
-                        + heuristic.estimate(n, goal))
-        );
+    public void initialize(Graph graph, Node start, Node goal, SearchObserver observer) {
+        this.graph = graph; this.start = start; this.goal = goal; this.observer = observer;
+        parentMap = new HashMap<>(); gScores = new HashMap<>();
+        explored = new HashSet<>(); frontierSet = new HashSet<>();
+        frontier = new PriorityQueue<>(Comparator.comparingDouble(
+                n -> gScores.getOrDefault(n, Double.POSITIVE_INFINITY) + heuristic.estimate(n, goal)));
 
         parentMap.put(start, null);
         gScores.put(start, 0.0);
         frontier.add(start);
+        frontierSet.add(start);
 
-        int nodesExpanded = 0;
-        int nodesGenerated = 1;
-        int maxFrontierSize = frontier.size();
+        nodesGenerated = 1; nodesExpanded = 0; maxFrontierSize = 1;
+        startTime = System.nanoTime();
+        beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        initialized = true; finished = false;
+    }
 
-        while (!frontier.isEmpty()) {
-            checkControl(); // pause/resume/stop
+    @Override
+    public boolean step() {
+        if (!initialized || finished || frontier.isEmpty()) return false;
 
-            Node current = frontier.poll();
-            nodesExpanded++;
-            explored.add(current);
+        Node current = frontier.poll();
+        frontierSet.remove(current);
+        explored.add(current);
+        nodesExpanded++;
 
-            if (observer != null) {
-                observer.onStep(current, new ArrayList<>(frontier), explored);
-            }
+        double g = gScores.getOrDefault(current, 0.0);
+        double h = heuristic.estimate(current, goal);
+        double f = g + h;
+        notifyObserver(observer, current, frontier, explored, g, explored.size(), g, h, f);
 
-            if (current.equals(goal)) {
-                List<Node> path = reconstructPath(parentMap, goal);
-                long endTime = System.nanoTime();
-                long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        if (current.equals(goal)) { finishSearch(); return false; }
 
-                return new SearchResult(
-                        path,
-                        gScores.get(goal),
-                        nodesExpanded,
-                        nodesGenerated,
-                        explored.size(),
-                        maxFrontierSize,
-                        path.size() - 1,
-                        (endTime - startTime) / 1_000_000,
-                        (afterMem - beforeMem)
-                );
-            }
-
-            for (var edge : graph.getNeighbors(current)) {
-                Node neighbor = edge.getTo();
-                double tentativeG = gScores.get(current) + edge.getCost();
-
-                if (!gScores.containsKey(neighbor) || tentativeG < gScores.get(neighbor)) {
-                    gScores.put(neighbor, tentativeG);
-                    parentMap.put(neighbor, current);
-                    if (!frontier.contains(neighbor)) {
-                        frontier.add(neighbor);
-                        nodesGenerated++;
-                    }
+        for (var edge : graph.getNeighbors(current)) {
+            Node neighbor = edge.getTo();
+            double tentativeG = g + edge.getCost();
+            if (!gScores.containsKey(neighbor) || tentativeG < gScores.get(neighbor)) {
+                gScores.put(neighbor, tentativeG);
+                parentMap.put(neighbor, current);
+                if (!frontierSet.contains(neighbor)) {
+                    frontier.add(neighbor);
+                    frontierSet.add(neighbor);
+                    nodesGenerated++;
                 }
             }
-
-            maxFrontierSize = Math.max(maxFrontierSize, frontier.size());
         }
 
-        // Goal not found
+        maxFrontierSize = Math.max(maxFrontierSize, frontier.size());
+        maxFootprintSize = Math.max(maxFootprintSize, frontier.size() + explored.size());
+        return !frontier.isEmpty();
+    }
+
+    private void finishSearch() {
+        finished = true;
+
+        List<Node> path = reconstructPath(parentMap, goal);
+        double totalCost = gScores.getOrDefault(goal, Double.POSITIVE_INFINITY);
+        int solutionDepth = path.size() - 1;
+
         long endTime = System.nanoTime();
         long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 
-        return new SearchResult(
-                Collections.emptyList(),
-                Double.POSITIVE_INFINITY,
-                nodesExpanded,
-                nodesGenerated,
-                explored.size(),
-                maxFrontierSize,
-                -1,
-                (endTime - startTime) / 1_000_000,
-                (afterMem - beforeMem)
-        );
+        long runtimeMs = (endTime - startTime) / 1_000_000;
+        long memoryBytes = afterMem - beforeMem;
+
+        if (observer != null) {
+            observer.onFinish(
+                    path,
+                    nodesExpanded,
+                    nodesGenerated,
+                    maxFrontierSize,
+                    totalCost,
+                    solutionDepth,
+                    runtimeMs,
+                    memoryBytes
+            );
+        }
     }
 
-    private List<Node> reconstructPath(Map<Node, Node> parentMap, Node goal) {
-        List<Node> path = new ArrayList<>();
-        for (Node n = goal; n != null; n = parentMap.get(n)) {
-            path.add(n);
-        }
-        Collections.reverse(path);
-        return path;
-    }
+
+    @Override public boolean isFinished() { return finished || frontier.isEmpty(); }
 }
+

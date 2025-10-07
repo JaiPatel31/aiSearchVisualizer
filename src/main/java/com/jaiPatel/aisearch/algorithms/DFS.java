@@ -1,108 +1,87 @@
 package com.jaiPatel.aisearch.algorithms;
 
-import com.jaiPatel.aisearch.graph.Graph;
-import com.jaiPatel.aisearch.graph.Node;
-
-import java.util.*;
-
+import com.jaiPatel.aisearch.graph.*;
 import java.util.*;
 
 public class DFS extends AbstractSearchAlgorithm {
 
+    private Deque<Node> stack;
+    private Set<Node> explored;
+    private Map<Node, Node> parentMap;
+    private Graph graph;
+    private Node start, goal;
+    private SearchObserver observer;
+
+    private boolean initialized = false, finished = false;
+    private int nodesGenerated = 0, maxFrontierSize = 0, maxFootprintSize = 0;
+    private long startTime, beforeMem;
+
     @Override
-    public SearchResult solve(Graph graph, Node start, Node goal, SearchObserver observer) {
-        long startTime = System.nanoTime();
-        long beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+    public void initialize(Graph graph, Node start, Node goal, SearchObserver observer) {
+        this.graph = graph; this.start = start; this.goal = goal; this.observer = observer;
+        stack = new ArrayDeque<>(); explored = new HashSet<>(); parentMap = new HashMap<>();
+        stack.push(start); parentMap.put(start, null);
+        nodesGenerated = 1; nodesExpanded = 0; maxFrontierSize = 1;
+        startTime = System.nanoTime();
+        beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        initialized = true; finished = false;
+    }
 
-        Deque<Node> stack = new ArrayDeque<>();
-        Map<Node, Node> parentMap = new HashMap<>();
-        Set<Node> explored = new HashSet<>();
+    @Override
+    public boolean step() {
+        if (!initialized || finished || stack.isEmpty()) return false;
 
-        stack.push(start);
-        parentMap.put(start, null);
+        Node current = stack.pop();
+        explored.add(current); nodesExpanded++;
+        notifyObserver(observer, current, stack, explored, 0, explored.size(), 0, 0, 0);
 
-        int nodesExpanded = 0;
-        int nodesGenerated = 0;
-        int maxFrontierSize = stack.size();
+        if (current.equals(goal)) { finishSearch(); return false; }
 
-        while (!stack.isEmpty()) {
-            checkControl(); // ✅ pause/resume/stop hook
+        List<Node> neighbors = new ArrayList<>();
+        for (var edge : graph.getNeighbors(current)) neighbors.add(edge.getTo());
+        Collections.reverse(neighbors);
 
-            Node current = stack.pop();
-            nodesExpanded++;
-            explored.add(current);
-
-            if (observer != null) {
-                observer.onStep(current, stack, explored);
+        for (Node neighbor : neighbors) {
+            if (!explored.contains(neighbor) && !stack.contains(neighbor)) {
+                stack.push(neighbor);
+                parentMap.put(neighbor, current);
+                nodesGenerated++;
             }
-
-            if (current.equals(goal)) {
-                long endTime = System.nanoTime();
-                long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-
-                List<Node> path = reconstructPath(parentMap, goal);
-                int solutionDepth = path.size() - 1;
-
-                double totalCost = 0.0;
-                for (int i = 0; i < path.size() - 1; i++) {
-                    Node from = path.get(i);
-                    Node to = path.get(i + 1);
-                    totalCost += graph.getEdgeWeight(from, to); // <-- sum edge weights
-                }
-                return new SearchResult(
-                        path,
-                        totalCost, // cost = depth (unit weights)
-                        nodesExpanded,
-                        nodesGenerated,
-                        explored.size(),
-                        maxFrontierSize,
-                        solutionDepth,
-                        (endTime - startTime) / 1_000_000, // ms
-                        (afterMem - beforeMem) // bytes
-                );
-            }
-
-            // ✅ Push neighbors in reverse order so left-most expands first
-            List<Node> neighbors = new ArrayList<>();
-            for (var edge : graph.getNeighbors(current)) {
-                neighbors.add(edge.getTo());
-            }
-            Collections.reverse(neighbors);
-
-            for (Node neighbor : neighbors) {
-                if (!explored.contains(neighbor) && !stack.contains(neighbor)) {
-                    stack.push(neighbor);
-                    parentMap.put(neighbor, current);
-                    nodesGenerated++;
-                }
-            }
-
-            maxFrontierSize = Math.max(maxFrontierSize, stack.size());
         }
+
+        maxFrontierSize = Math.max(maxFrontierSize, stack.size());
+        maxFootprintSize = Math.max(maxFootprintSize, stack.size() + explored.size());
+        return !stack.isEmpty();
+    }
+
+    private void finishSearch() {
+        finished = true;
+
+        List<Node> path = reconstructPath(parentMap, goal);
+        double totalCost = calculatePathCost(graph, path);
+        int solutionDepth = path.size() - 1;
 
         long endTime = System.nanoTime();
         long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 
-        // If no path found
-        return new SearchResult(
-                Collections.emptyList(),
-                Double.POSITIVE_INFINITY,
-                nodesExpanded,
-                nodesGenerated,
-                explored.size(),
-                maxFrontierSize,
-                -1,
-                (endTime - startTime) / 1_000_000,
-                (afterMem - beforeMem)
-        );
+        long runtimeMs = (endTime - startTime) / 1_000_000;
+        long memoryBytes = afterMem - beforeMem;
+
+        if (observer != null) {
+            observer.onFinish(
+                    path,
+                    nodesExpanded,
+                    nodesGenerated,
+                    maxFrontierSize,
+                    totalCost,
+                    solutionDepth,
+                    runtimeMs,
+                    memoryBytes
+            );
+        }
     }
 
-    private List<Node> reconstructPath(Map<Node, Node> parent, Node goal) {
-        List<Node> path = new ArrayList<>();
-        for (Node n = goal; n != null; n = parent.get(n)) {
-            path.add(n);
-        }
-        Collections.reverse(path);
-        return path;
-    }
+
+    @Override public boolean isFinished() { return finished || stack.isEmpty(); }
 }
+

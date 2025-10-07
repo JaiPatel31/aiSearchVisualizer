@@ -5,99 +5,88 @@ import com.jaiPatel.aisearch.graph.Node;
 
 import java.util.*;
 
-import java.util.*;
-
+/**
+ * Incremental BFS for live visualization.
+ */
 public class BFS extends AbstractSearchAlgorithm {
 
+    private Queue<Node> frontier;
+    private Set<Node> explored;
+    private Map<Node, Node> parentMap;
+
+    private Graph graph;
+    private Node start, goal;
+    private SearchObserver observer;
+
+    private boolean initialized = false, finished = false;
+    private int nodesGenerated = 0, maxFrontierSize = 0, maxFootprintSize = 0;
+    private long startTime, beforeMem;
+
     @Override
-    public SearchResult solve(Graph graph, Node start, Node goal, SearchObserver observer) {
-        long startTime = System.nanoTime();
-        long beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+    public void initialize(Graph graph, Node start, Node goal, SearchObserver observer) {
+        this.graph = graph; this.start = start; this.goal = goal; this.observer = observer;
+        frontier = new LinkedList<>(); explored = new HashSet<>(); parentMap = new HashMap<>();
+        frontier.add(start); parentMap.put(start, null);
+        nodesGenerated = 1; nodesExpanded = 0; maxFrontierSize = 1;
+        startTime = System.nanoTime();
+        beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        initialized = true; finished = false;
+    }
 
-        Queue<Node> frontier = new LinkedList<>();
-        Map<Node, Node> parentMap = new HashMap<>();
-        Set<Node> explored = new HashSet<>();
+    @Override
+    public boolean step() {
+        if (!initialized || finished || frontier.isEmpty()) return false;
+        Node current = frontier.poll();
+        explored.add(current); nodesExpanded++;
 
-        frontier.add(start);
-        parentMap.put(start, null);
+        notifyObserver(observer, current, frontier, explored, 0, explored.size(), 0, 0, 0);
 
-        int nodesExpanded = 0;
-        int nodesGenerated = 0;
-        int maxFrontierSize = frontier.size();
+        if (current.equals(goal)) { finishSearch(); return false; }
 
-        while (!frontier.isEmpty()) {
-            checkControl(); // ✅ pause/resume/stop hook
-
-            Node current = frontier.poll();
-            nodesExpanded++;
-            explored.add(current);
-
-            if (observer != null) {
-                observer.onStep(current, frontier, explored);
+        for (var edge : graph.getNeighbors(current)) {
+            Node neighbor = edge.getTo();
+            if (!explored.contains(neighbor) && !frontier.contains(neighbor)) {
+                frontier.add(neighbor);
+                parentMap.put(neighbor, current);
+                nodesGenerated++;
             }
-
-            if (current.equals(goal)) {
-                long endTime = System.nanoTime();
-                long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-
-                List<Node> path = reconstructPath(parentMap, goal);
-                int solutionDepth = path.size() - 1;
-
-
-                double totalCost = 0.0;
-                for (int i = 0; i < path.size() - 1; i++) {
-                    Node from = path.get(i);
-                    Node to = path.get(i + 1);
-                    totalCost += graph.getEdgeWeight(from, to); // <-- sum edge weights
-                }
-
-                return new SearchResult(
-                        path,
-                        totalCost, // cost = depth (unit weights)
-                        nodesExpanded,
-                        nodesGenerated,
-                        explored.size(),
-                        maxFrontierSize,
-                        solutionDepth,
-                        (endTime - startTime) / 1_000_000, // ms
-                        (afterMem - beforeMem) // bytes
-                );
-            }
-
-            for (var edge : graph.getNeighbors(current)) {
-                Node neighbor = edge.getTo();
-                if (!explored.contains(neighbor) && !frontier.contains(neighbor)) {
-                    frontier.add(neighbor);
-                    parentMap.put(neighbor, current);
-                    nodesGenerated++;
-                }
-            }
-
-            maxFrontierSize = Math.max(maxFrontierSize, frontier.size());
         }
+
+        maxFrontierSize = Math.max(maxFrontierSize, frontier.size());
+        maxFootprintSize = Math.max(maxFootprintSize, frontier.size() + explored.size());
+        return !frontier.isEmpty();
+    }
+
+    private void finishSearch() {
+        finished = true;
+
+        List<Node> path = reconstructPath(parentMap, goal);
+        double totalCost = calculatePathCost(graph, path);
+        int solutionDepth = path.size() - 1;
 
         long endTime = System.nanoTime();
         long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 
-        return new SearchResult(
-                Collections.emptyList(),
-                Double.POSITIVE_INFINITY,
-                nodesExpanded,
-                nodesGenerated,
-                explored.size(),
-                maxFrontierSize,
-                -1, // no solution depth
-                (endTime - startTime) / 1_000_000,
-                (afterMem - beforeMem)
-        );
+        long runtimeMs = (endTime - startTime) / 1_000_000;
+        long memoryBytes = afterMem - beforeMem;
+
+        if (observer != null) {
+            observer.onFinish(
+                    path,
+                    nodesExpanded,
+                    nodesGenerated,
+                    maxFrontierSize,
+                    totalCost,
+                    solutionDepth,
+                    runtimeMs,
+                    memoryBytes
+            );
+        }
     }
 
-    private List<Node> reconstructPath(Map<Node, Node> parent, Node goal) {
-        List<Node> path = new ArrayList<>();
-        for (Node n = goal; n != null; n = parent.get(n)) {
-            path.add(n);
-        }
-        Collections.reverse(path);
-        return path;
-    }
+    @Override public boolean isFinished() { return finished || frontier.isEmpty(); }
 }
+
+
+
+

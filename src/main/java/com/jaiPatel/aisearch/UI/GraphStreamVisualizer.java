@@ -1,0 +1,152 @@
+package com.jaiPatel.aisearch.UI;
+
+import com.jaiPatel.aisearch.graph.*;
+import javafx.application.Platform;
+import org.graphstream.graph.implementations.SingleGraph;
+import org.graphstream.ui.fx_viewer.FxViewer;
+import org.graphstream.ui.fx_viewer.FxViewPanel;
+import org.graphstream.ui.layout.springbox.implementations.LinLog;
+
+import java.util.List;
+
+public class GraphStreamVisualizer {
+    private final Graph aiGraph;
+    private final SingleGraph gsGraph;
+    private FxViewer viewer;
+    private FxViewPanel viewPanel;
+
+    public GraphStreamVisualizer(Graph aiGraph) {
+        this.aiGraph = aiGraph;
+        this.gsGraph = new SingleGraph("AI Search Graph");
+        setupNodesAndEdges();
+        setupStyles();
+    }
+
+    private void setupNodesAndEdges() {
+        for (Node n : aiGraph.getNodes()) {
+            org.graphstream.graph.Node gsNode = gsGraph.addNode(n.getName());
+            gsNode.setAttribute("ui.label", n.getName());
+        }
+
+        for (Node from : aiGraph.getNodes()) {
+            for (Edge e : aiGraph.getEdgesFrom(from)) {
+                String n1 = from.getName();
+                String n2 = e.getTo().getName();
+                String id = (n1.compareTo(n2) < 0) ? n1 + "-" + n2 : n2 + "-" + n1;
+                if (gsGraph.getEdge(id) == null) {
+                    org.graphstream.graph.Edge gsEdge = gsGraph.addEdge(id, n1, n2, false);
+                    gsEdge.setAttribute("ui.label", String.format("%.1f", e.getCost()));
+                }
+            }
+        }
+    }
+
+    /** Reset all nodes/edges before a new run */
+    public void resetGraph() {
+        Platform.runLater(() -> {
+            for (org.graphstream.graph.Node node : gsGraph) {
+                node.setAttribute("ui.style", "fill-color: cornflowerblue;");
+                node.removeAttribute("ui.class");
+            }
+            gsGraph.edges().forEach(edge -> {
+                edge.setAttribute("ui.style", "fill-color: lightgray;");
+                edge.removeAttribute("ui.class");
+            });
+        });
+    }
+
+    private void setupStyles() {
+        gsGraph.setAttribute("ui.stylesheet",
+                "node { size: 18px; fill-color: cornflowerblue; text-alignment: above; text-size: 14px; }" +
+                        "node.current { fill-color: orange; }" +
+                        "node.frontier { fill-color: yellow; }" +
+                        "node.visited { fill-color: lightgreen; }" +
+                        "node.blocked { fill-color: grey; }" +
+                        "node.goal { fill-color: red; }" +
+                        "edge.path { fill-color: purple; size: 3px; }" +
+                        "edge { fill-color: grey; text-size: 12px; }"
+        );
+    }
+
+    /** Create a stable view panel */
+    public FxViewPanel getView() {
+        viewer = new FxViewer(gsGraph, FxViewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
+        LinLog layout = new LinLog();
+        layout.setQuality(0.7);      // smoother layout
+        layout.setGravityFactor(0.9); // keeps nodes pulled toward the center
+        viewer.enableAutoLayout(layout);
+        viewPanel = (FxViewPanel) viewer.addDefaultView(false);
+        viewPanel.setMinSize(600, 600);
+
+        return viewPanel;
+    }
+
+    /** Step-by-step visualization updates */
+    public void updateNodeStates(List<Node> frontier, List<Node> visited, Node current, Node goal, List<Node> blocked) {
+        Platform.runLater(() -> {
+            // Reset node styles
+            for (org.graphstream.graph.Node gsNode : gsGraph)
+                gsNode.removeAttribute("ui.class");
+
+            // Reset edge styles (don't color them during step updates)
+            for (org.graphstream.graph.Edge gsEdge : gsGraph.edges().toArray(org.graphstream.graph.Edge[]::new))
+                gsEdge.removeAttribute("ui.class");
+
+            // Color node groups
+            if (visited != null) {
+                visited.forEach(n -> {
+                    org.graphstream.graph.Node node = gsGraph.getNode(n.getName());
+                    if (node != null) node.setAttribute("ui.class", "visited");
+                });
+            }
+
+            if (frontier != null) {
+                frontier.forEach(n -> {
+                    org.graphstream.graph.Node node = gsGraph.getNode(n.getName());
+                    if (node != null) node.setAttribute("ui.class", "frontier");
+                });
+            }
+
+            if (current != null) {
+                org.graphstream.graph.Node node = gsGraph.getNode(current.getName());
+                if (node != null) node.setAttribute("ui.class", "current");
+            }
+
+            if (goal != null) {
+                org.graphstream.graph.Node node = gsGraph.getNode(goal.getName());
+                if (node != null) node.setAttribute("ui.class", "goal");
+            }
+
+            if (blocked != null) {
+                blocked.forEach(n -> {
+                    org.graphstream.graph.Node node = gsGraph.getNode(n.getName());
+                    if (node != null) node.setAttribute("ui.class", "blocked");
+                });
+            }
+        });
+    }
+
+    /** Highlight final optimal path after search finishes */
+    public void highlightPath(List<Node> path) {
+        System.out.println("Highlighting path: " + path);
+        if (path == null || path.size() < 2) return;
+
+        Platform.runLater(() -> {
+            // Keep start/goal nodes distinctly colored
+            org.graphstream.graph.Node start = gsGraph.getNode(path.getFirst().getName());
+            org.graphstream.graph.Node goal = gsGraph.getNode(path.getLast().getName());
+            if (start != null) start.setAttribute("ui.class", "visited");
+            if (goal != null) goal.setAttribute("ui.class", "goal");
+
+            // Highlight only the final path edges
+            for (int i = 0; i < path.size() - 1; i++) {
+                String id1 = path.get(i).getName() + "-" + path.get(i + 1).getName();
+                String id2 = path.get(i + 1).getName() + "-" + path.get(i).getName();
+                org.graphstream.graph.Edge e = gsGraph.getEdge(id1);
+                if (e == null) e = gsGraph.getEdge(id2);
+                if (e != null) e.setAttribute("ui.class", "path");
+            }
+        });
+    }
+
+}
