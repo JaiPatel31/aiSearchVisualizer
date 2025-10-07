@@ -127,9 +127,16 @@ public class GraphSearchController {
         VBox summaryPanel = createSummaryPanel();
         VBox legendPanel = createLegendPanel();
 
-        VBox rightPanel = new VBox(20, controls, summaryPanel, legendPanel);
-        rightPanel.setPrefWidth(280);
-        root.setRight(rightPanel);
+        VBox rightContent = new VBox(20, controls, summaryPanel, legendPanel);
+        rightContent.setPrefWidth(280);
+        rightContent.setStyle("-fx-padding: 10;");
+
+        ScrollPane rightScroll = new ScrollPane(rightContent);
+        rightScroll.setFitToWidth(true);
+        rightScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        rightScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        root.setRight(rightScroll);
 
         setupTimeline();
         return root;
@@ -215,16 +222,27 @@ public class GraphSearchController {
             }
 
             @Override
-            public void onFinish(List<Node> path, int nodesExpanded, double totalCost) {
+            public void onFinish(List<Node> path,
+                                 int nodesExpanded,
+                                 int nodesGenerated,
+                                 int maxFrontierSize,
+                                 double totalCost,
+                                 int solutionDepth,
+                                 long runtimeMs,
+                                 long memoryBytes) {
                 Platform.runLater(() -> {
+                    System.out.println("Highlighting path!");
                     timeline.stop();
                     visualizer.highlightPath(path);
+                    updateFinalMetrics(nodesExpanded, nodesGenerated, maxFrontierSize,
+                            totalCost, solutionDepth, runtimeMs, memoryBytes);
+
                     metricsLabel.setText(String.format(
-                            "✅ Search complete!\nAlgorithm: %s\nNodes expanded: %d\nPath cost: %.2f\nPath length: %d",
+                            "✅ Search complete!\nAlgorithm: %s\nNodes Expanded: %d\nPath Cost: %.2f\nPath Length: %d",
                             algorithmBox.getValue(),
                             nodesExpanded,
                             totalCost,
-                            path != null ? path.size() : 0
+                            (path != null ? path.size() : 0)
                     ));
                 });
             }
@@ -252,7 +270,16 @@ public class GraphSearchController {
     private void restartSearch() {
         if (timeline != null) timeline.stop();
         visualizer.resetGraph();
-        metricsLabel.setText("");
+
+        // Clear labels
+        metricsLabel.setText("Ready for new search...");
+        nodesExpandedLabel.setText("Nodes Expanded: 0");
+        pathCostLabel.setText("Path Cost: 0.0");
+        depthLabel.setText("Solution Depth: 0");
+        timeLabel.setText("Runtime: 0 ms");
+        memoryLabel.setText("Memory: 0 KB");
+        heuristicLabel.setText("Heuristic (avg): —");
+
     }
 
 
@@ -286,6 +313,18 @@ public class GraphSearchController {
             nodesExpandedLabel.setText("Nodes Expanded: " + nodesExpanded);
             pathCostLabel.setText(String.format("Path Cost: %.2f", pathCost));
             depthLabel.setText("Solution Depth: " + solutionDepth);
+        });
+    }
+    private void updateFinalMetrics(int nodesExpanded, int nodesGenerated,
+                                    int maxFrontier, double totalCost,
+                                    int solutionDepth, long runtimeMs,
+                                    long memoryBytes) {
+        Platform.runLater(() -> {
+            nodesExpandedLabel.setText("Nodes Expanded: " + nodesExpanded);
+            pathCostLabel.setText(String.format("Path Cost: %.2f", totalCost));
+            depthLabel.setText("Solution Depth: " + solutionDepth);
+            timeLabel.setText("Runtime: " + runtimeMs + " ms");
+            memoryLabel.setText(String.format("Memory: %.2f KB", memoryBytes / 1024.0));
         });
     }
     private VBox createLegendPanel() {

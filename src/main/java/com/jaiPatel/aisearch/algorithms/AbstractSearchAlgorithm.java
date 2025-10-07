@@ -2,7 +2,7 @@ package com.jaiPatel.aisearch.algorithms;
 
 import com.jaiPatel.aisearch.graph.*;
 
-import java.util.Collection;
+import java.util.*;
 
 /**
  * Base class for all search algorithms.
@@ -20,6 +20,14 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
     public void resume() { paused = false; }
     public void stop() { stopped = true; }
 
+    protected int nodesGenerated = 0;
+    protected int maxFrontierSize = 0;
+    protected long startTime = 0;
+
+    public int getNodesExpanded() { return nodesExpanded; }
+    public int getNodesGenerated() { return nodesGenerated; }
+    public int getMaxFrontierSize() { return maxFrontierSize; }
+    public long getStartTime() { return startTime; }
     /**
      * Called in each loop iteration to honor pause/stop commands.
      */
@@ -94,4 +102,21 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
                 "Incremental algorithms should use initialize() and step() instead of solve()."
         );
     }
+    protected double calculatePathCost(Graph graph, List<Node> path) {
+        double cost = 0;
+        for (int i = 0; i < path.size() - 1; i++) {
+            cost += graph.getEdgeWeight(path.get(i), path.get(i + 1));
+        }
+        return cost;
+    }
+
+    protected List<Node> reconstructPath(Map<Node, Node> parent, Node goal) {
+        List<Node> path = new ArrayList<>();
+        for (Node n = goal; n != null; n = parent.get(n)) {
+            path.add(n);
+        }
+        Collections.reverse(path);
+        return path;
+    }
+
 }

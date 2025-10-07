@@ -15,68 +15,34 @@ public class BFS extends AbstractSearchAlgorithm {
     private Map<Node, Node> parentMap;
 
     private Graph graph;
-    private Node start;
-    private Node goal;
+    private Node start, goal;
     private SearchObserver observer;
 
-    private boolean initialized = false;
-    private boolean finished = false;
+    private boolean initialized = false, finished = false;
+    private int nodesGenerated = 0, maxFrontierSize = 0, maxFootprintSize = 0;
+    private long startTime, beforeMem;
 
-    private int nodesGenerated = 0;
-    private int nodesExpanded = 0;
-    private int maxFrontierSize = 0;
-
-    private long startTime;
-    private long beforeMem;
-
-    /** Called once before stepping starts */
     @Override
     public void initialize(Graph graph, Node start, Node goal, SearchObserver observer) {
-        this.graph = graph;
-        this.start = start;
-        this.goal = goal;
-        this.observer = observer;
-
-        this.frontier = new LinkedList<>();
-        this.explored = new HashSet<>();
-        this.parentMap = new HashMap<>();
-
-        this.frontier.add(start);
-        this.parentMap.put(start, null);
-
-        this.nodesGenerated = 0;
-        this.nodesExpanded = 0;
-        this.maxFrontierSize = 1;
-
-        this.startTime = System.nanoTime();
-        this.beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
-
-        this.initialized = true;
-        this.finished = false;
+        this.graph = graph; this.start = start; this.goal = goal; this.observer = observer;
+        frontier = new LinkedList<>(); explored = new HashSet<>(); parentMap = new HashMap<>();
+        frontier.add(start); parentMap.put(start, null);
+        nodesGenerated = 1; nodesExpanded = 0; maxFrontierSize = 1;
+        startTime = System.nanoTime();
+        beforeMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+        initialized = true; finished = false;
     }
 
-    /** Runs one BFS step — return true if more steps remain */
     @Override
     public boolean step() {
         if (!initialized || finished || frontier.isEmpty()) return false;
-
         Node current = frontier.poll();
-        explored.add(current);
-        nodesExpanded++;
+        explored.add(current); nodesExpanded++;
 
-        // Notify UI (all metrics updated live)
-        notifyObserver(observer, current, frontier, explored,
-                0, // path cost (BFS = uniform cost)
-                explored.size(),
-                0, 0, 0);
+        notifyObserver(observer, current, frontier, explored, 0, explored.size(), 0, 0, 0);
 
-        // Check goal
-        if (current.equals(goal)) {
-            finishSearch();
-            return false;
-        }
+        if (current.equals(goal)) { finishSearch(); return false; }
 
-        // Expand neighbors
         for (var edge : graph.getNeighbors(current)) {
             Node neighbor = edge.getTo();
             if (!explored.contains(neighbor) && !frontier.contains(neighbor)) {
@@ -87,10 +53,10 @@ public class BFS extends AbstractSearchAlgorithm {
         }
 
         maxFrontierSize = Math.max(maxFrontierSize, frontier.size());
+        maxFootprintSize = Math.max(maxFootprintSize, frontier.size() + explored.size());
         return !frontier.isEmpty();
     }
 
-    /** Called automatically when goal is found */
     private void finishSearch() {
         finished = true;
 
@@ -101,43 +67,26 @@ public class BFS extends AbstractSearchAlgorithm {
         long endTime = System.nanoTime();
         long afterMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 
-        observer.onFinish(path, nodesExpanded, totalCost);
+        long runtimeMs = (endTime - startTime) / 1_000_000;
+        long memoryBytes = afterMem - beforeMem;
 
-        new SearchResult(
-                path,
-                totalCost,
-                nodesExpanded,
-                nodesGenerated,
-                explored.size(),
-                maxFrontierSize,
-                solutionDepth,
-                (endTime - startTime) / 1_000_000,
-                (afterMem - beforeMem)
-        );
-    }
-
-    private double calculatePathCost(Graph graph, List<Node> path) {
-        double cost = 0;
-        for (int i = 0; i < path.size() - 1; i++) {
-            cost += graph.getEdgeWeight(path.get(i), path.get(i + 1));
+        if (observer != null) {
+            observer.onFinish(
+                    path,
+                    nodesExpanded,
+                    nodesGenerated,
+                    maxFrontierSize,
+                    totalCost,
+                    solutionDepth,
+                    runtimeMs,
+                    memoryBytes
+            );
         }
-        return cost;
     }
 
-    private List<Node> reconstructPath(Map<Node, Node> parent, Node goal) {
-        List<Node> path = new ArrayList<>();
-        for (Node n = goal; n != null; n = parent.get(n)) {
-            path.add(n);
-        }
-        Collections.reverse(path);
-        return path;
-    }
-
-    @Override
-    public boolean isFinished() {
-        return finished || frontier.isEmpty();
-    }
+    @Override public boolean isFinished() { return finished || frontier.isEmpty(); }
 }
+
 
 
 

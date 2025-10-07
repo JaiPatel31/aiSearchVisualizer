@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Observer interface for step-by-step search visualization.
+ * Observer interface for step-by-step search visualization and metrics reporting.
  */
 public interface SearchObserver {
 
@@ -24,11 +24,26 @@ public interface SearchObserver {
 
     /**
      * Called once when the search completes (successfully or fails).
-     * @param path  The final solution path (may be null or empty if no solution found)
-     * @param totalNodesExpanded  The final count of nodes expanded
-     * @param totalCost  The total path cost of the found solution
+     * Provides full benchmarking metrics.
+     *
+     * @param path              The final solution path (may be null or empty if no solution found)
+     * @param totalNodesExpanded Total number of nodes expanded
+     * @param totalNodesGenerated Total number of nodes generated
+     * @param maxFrontierSize   Maximum frontier size observed
+     * @param totalCost         Total path cost of the found solution
+     * @param solutionDepth     Depth of the final solution path
+     * @param elapsedTimeMs     Wall-clock runtime in milliseconds
+     * @param memoryBytes       Peak memory used (approx.)
      */
-    default void onFinish(List<Node> path, int totalNodesExpanded, double totalCost) {
+    default void onFinish(List<Node> path,
+                          int totalNodesExpanded,
+                          int totalNodesGenerated,
+                          int maxFrontierSize,
+                          double totalCost,
+                          int solutionDepth,
+                          long elapsedTimeMs,
+                          long memoryBytes) {
         // Optional to override
     }
+
 }

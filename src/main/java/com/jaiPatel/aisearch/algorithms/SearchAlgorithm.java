@@ -30,5 +30,10 @@ public interface SearchAlgorithm {
      * Useful for benchmarking or background runs.
      */
     SearchResult solve(Graph graph, Node start, Node goal, SearchObserver observer);
+
+    default int getNodesExpanded() { return 0; }
+    default int getNodesGenerated() { return 0; }
+    default int getMaxFrontierSize() { return 0; }
+    default long getStartTime() { return 0L; }
 }
 

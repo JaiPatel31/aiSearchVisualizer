@@ -70,11 +70,14 @@ public class GraphStreamVisualizer {
 
     /** Create a stable view panel */
     public FxViewPanel getView() {
-        if (viewPanel == null) {
-            viewer = new FxViewer(gsGraph, FxViewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
-            viewer.enableAutoLayout(new LinLog(false));
-            viewPanel = (FxViewPanel) viewer.addDefaultView(false);
-        }
+        viewer = new FxViewer(gsGraph, FxViewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
+        LinLog layout = new LinLog();
+        layout.setQuality(0.7);      // smoother layout
+        layout.setGravityFactor(0.9); // keeps nodes pulled toward the center
+        viewer.enableAutoLayout(layout);
+        viewPanel = (FxViewPanel) viewer.addDefaultView(false);
+        viewPanel.setMinSize(600, 600);
+
         return viewPanel;
     }
 
@@ -125,6 +128,7 @@ public class GraphStreamVisualizer {
 
     /** Highlight final optimal path after search finishes */
     public void highlightPath(List<Node> path) {
+        System.out.println("Highlighting path: " + path);
         if (path == null || path.size() < 2) return;
 
         Platform.runLater(() -> {
