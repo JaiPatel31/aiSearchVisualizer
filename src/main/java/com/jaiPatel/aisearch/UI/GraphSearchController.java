@@ -51,6 +51,7 @@ public class GraphSearchController {
     private Label timeLabel = new Label("Time: 0 ms");
     private Label memoryLabel = new Label("Memory: 0 KB");
     private Label heuristicLabel = new Label("Heuristic (avg): —");
+    private ListView<String> openListView = new ListView<>();
 
     // Observer instance used by all algorithms
     private SearchObserver observer;
@@ -124,10 +125,18 @@ public class GraphSearchController {
                 metricsLabel
         );
 
+        Label openListLabel = new Label("Frontier (Open List):");
+        openListLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        openListView.setPrefHeight(120);
+        openListView.setPlaceholder(new Label("Empty"));
+        VBox openListPanel = new VBox(5, openListLabel, openListView);
+        openListPanel.setStyle("-fx-border-color: lightgray; -fx-border-width: 1px; -fx-padding: 10px;");
+
+
         VBox summaryPanel = createSummaryPanel();
         VBox legendPanel = createLegendPanel();
 
-        VBox rightContent = new VBox(20, controls, summaryPanel, legendPanel);
+        VBox rightContent = new VBox(20, controls,openListPanel, summaryPanel, legendPanel);
         rightContent.setPrefWidth(280);
         rightContent.setStyle("-fx-padding: 10;");
 
@@ -217,6 +226,10 @@ public class GraphSearchController {
                             current,
                             goalNode,
                             null);
+                    openListView.getItems().setAll(
+                            frontier.stream()
+                                    .map(Node::getName)
+                                    .toList());
                     updateMetrics(nodesExpanded, pathCost, solutionDepth);
                 });
             }
@@ -367,52 +380,95 @@ public class GraphSearchController {
         Dialog<Void> dialog = new Dialog<>();
         dialog.setTitle("Random Graph Generator");
 
+        ComboBox<String> typeBox = new ComboBox<>();
+        typeBox.getItems().addAll("General Weighted Graph", "Grid World");
+        typeBox.setValue("General Weighted Graph");
+
+        // Shared seed
+        TextField seedField = new TextField(String.valueOf(System.currentTimeMillis()));
+
+        // --- General graph section ---
+        GridPane generalPane = new GridPane();
+        generalPane.setHgap(10);
+        generalPane.setVgap(10);
+
         TextField nodesField = new TextField("10");
         TextField branchingField = new TextField("3");
         TextField minWeightField = new TextField("1");
         TextField maxWeightField = new TextField("10");
-        TextField seedField = new TextField(String.valueOf(System.currentTimeMillis()));
 
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.add(new Label("Number of Nodes:"), 0, 0);
-        grid.add(nodesField, 1, 0);
-        grid.add(new Label("Branching Factor:"), 0, 1);
-        grid.add(branchingField, 1, 1);
-        grid.add(new Label("Min Edge Weight:"), 0, 2);
-        grid.add(minWeightField, 1, 2);
-        grid.add(new Label("Max Edge Weight:"), 0, 3);
-        grid.add(maxWeightField, 1, 3);
-        grid.add(new Label("Seed:"), 0, 4);
-        grid.add(seedField, 1, 4);
+        generalPane.addRow(0, new Label("Number of Nodes:"), nodesField);
+        generalPane.addRow(1, new Label("Branching Factor:"), branchingField);
+        generalPane.addRow(2, new Label("Min Edge Weight:"), minWeightField);
+        generalPane.addRow(3, new Label("Max Edge Weight:"), maxWeightField);
 
-        dialog.getDialogPane().setContent(grid);
+        // --- Grid world section ---
+        GridPane gridPane = new GridPane();
+        gridPane.setHgap(10);
+        gridPane.setVgap(10);
+
+        TextField gridSizeField = new TextField("10");
+        TextField densityField = new TextField("0.2");
+        ComboBox<String> connectivityBox = new ComboBox<>();
+        connectivityBox.getItems().addAll("4-connected (Manhattan)", "8-connected (Diagonal)");
+        connectivityBox.setValue("4-connected (Manhattan)");
+        CheckBox weightedCheck = new CheckBox("Use weighted costs");
+        weightedCheck.setSelected(false);
+
+        gridPane.addRow(0, new Label("Grid Size (NxN):"), gridSizeField);
+        gridPane.addRow(1, new Label("Obstacle Density (0–1):"), densityField);
+        gridPane.addRow(2, new Label("Connectivity:"), connectivityBox);
+        gridPane.addRow(3, weightedCheck);
+
+        // --- Root layout ---
+        VBox rootBox = new VBox(12);
+        rootBox.getChildren().addAll(
+                new HBox(10, new Label("Graph Type:"), typeBox),
+                generalPane,
+                gridPane,
+                new HBox(10, new Label("Seed:"), seedField)
+        );
+
+        // show only one section
+        gridPane.setVisible(false);
+        typeBox.setOnAction(e -> {
+            boolean isGrid = typeBox.getValue().equals("Grid World");
+            generalPane.setVisible(!isGrid);
+            gridPane.setVisible(isGrid);
+        });
+
+        dialog.getDialogPane().setContent(rootBox);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         dialog.setResultConverter(button -> {
             if (button == ButtonType.OK) {
-                int n = Integer.parseInt(nodesField.getText());
-                int b = Integer.parseInt(branchingField.getText());
-                int minW = Integer.parseInt(minWeightField.getText());
-                int maxW = Integer.parseInt(maxWeightField.getText());
                 long seed = Long.parseLong(seedField.getText());
+                if (typeBox.getValue().equals("General Weighted Graph")) {
+                    int n = Integer.parseInt(nodesField.getText());
+                    int b = Integer.parseInt(branchingField.getText());
+                    int minW = Integer.parseInt(minWeightField.getText());
+                    int maxW = Integer.parseInt(maxWeightField.getText());
+                    this.graph = RandomGraphGenerator.generate(n, b, minW, maxW, seed);
+                } else {
+                    int size = Integer.parseInt(gridSizeField.getText());
+                    double density = Double.parseDouble(densityField.getText());
+                    boolean diagonal = connectivityBox.getValue().contains("8");
+                    boolean weighted = weightedCheck.isSelected();
+                    this.graph = GridGraphGenerator.generateGrid(size, density, diagonal, weighted, seed);
+                }
 
-                this.graph = RandomGraphGenerator.generate(n, b, minW, maxW, seed);
                 this.visualizer = new GraphStreamVisualizer(graph);
-                // Replace the displayed graph
                 BorderPane root = (BorderPane) playButton.getScene().getRoot();
                 root.setCenter(visualizer.getView());
-
-                // Refresh visuals and controls
                 visualizer.resetGraph();
                 startBox.getItems().setAll(graph.getNodes().stream().map(Node::getName).toList());
                 goalBox.getItems().setAll(graph.getNodes().stream().map(Node::getName).toList());
-
             }
             return null;
         });
 
         dialog.showAndWait();
     }
+
+
 }
