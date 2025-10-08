@@ -71,15 +71,36 @@ public class GraphStreamVisualizer {
     /** Create a stable view panel */
     public FxViewPanel getView() {
         viewer = new FxViewer(gsGraph, FxViewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
-        LinLog layout = new LinLog();
-        layout.setQuality(0.7);      // smoother layout
-        layout.setGravityFactor(0.9); // keeps nodes pulled toward the center
-        viewer.enableAutoLayout(layout);
         viewPanel = (FxViewPanel) viewer.addDefaultView(false);
         viewPanel.setMinSize(600, 600);
 
+        boolean isGridGraph = aiGraph.getNodes().stream().anyMatch(n -> n.getX() >= 0 && n.getY() >= 0);
+
+        if (isGridGraph) {
+            viewer.disableAutoLayout();
+
+            double spacing = 60;  // pixels between nodes
+            double margin = 50;   // margin from window edges
+
+            for (Node n : aiGraph.getNodes()) {
+                org.graphstream.graph.Node gsNode = gsGraph.getNode(n.getName());
+                if (gsNode != null) {
+                    double x = margin + n.getX() * spacing;
+                    double y = margin + n.getY() * spacing;
+                    gsNode.setAttribute("xyz", x, -y, 0);
+                }
+            }
+        } else {
+            var layout = new LinLog();
+            layout.setQuality(0.7);
+            layout.setGravityFactor(0.9);
+            viewer.enableAutoLayout(layout);
+        }
+
         return viewPanel;
     }
+
+
 
     /** Step-by-step visualization updates */
     public void updateNodeStates(List<Node> frontier, List<Node> visited, Node current, Node goal, List<Node> blocked) {
@@ -147,6 +168,35 @@ public class GraphStreamVisualizer {
                 if (e != null) e.setAttribute("ui.class", "path");
             }
         });
+    }
+    private void centerGridView() {
+        double minX = Double.MAX_VALUE, maxX = Double.MIN_VALUE;
+        double minY = Double.MAX_VALUE, maxY = Double.MIN_VALUE;
+
+        for (org.graphstream.graph.Node node : gsGraph) {
+            Number xAttr = node.getNumber("x");
+            Number yAttr = node.getNumber("y");
+            if (xAttr == null || yAttr == null) continue;
+            double x = xAttr.doubleValue();
+            double y = yAttr.doubleValue();
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+        }
+
+        double offsetX = -(minX + maxX) / 2;
+        double offsetY = -(minY + maxY) / 2;
+
+        for (org.graphstream.graph.Node node : gsGraph) {
+            Number xAttr = node.getNumber("x");
+            Number yAttr = node.getNumber("y");
+            if (xAttr == null || yAttr == null) continue;
+            node.setAttribute("xyz",
+                    xAttr.doubleValue() + offsetX,
+                    yAttr.doubleValue() + offsetY,
+                    0);
+        }
     }
 
 }

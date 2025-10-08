@@ -24,6 +24,10 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
     protected int maxFrontierSize = 0;
     protected long startTime = 0;
 
+    protected Map<Node, Double> gScore = new HashMap<>();
+    protected Map<Node, Double> hScore = new HashMap<>();
+    protected Map<Node, Double> fScore = new HashMap<>();
+
     public int getNodesExpanded() { return nodesExpanded; }
     public int getNodesGenerated() { return nodesGenerated; }
     public int getMaxFrontierSize() { return maxFrontierSize; }

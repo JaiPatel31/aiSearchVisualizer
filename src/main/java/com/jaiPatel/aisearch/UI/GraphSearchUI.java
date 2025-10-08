@@ -21,8 +21,8 @@ public class GraphSearchUI extends Application {
     public void start(Stage primaryStage) throws Exception {
         // Load default graph (user can later switch to random mode in UI)
         graph = GraphLoaderSet1.load(
-                "C:\\Users\\Jai Patel\\Desktop\\aiSearchVisualizer\\src\\main\\resources\\coordinates.csv",
-                "C:\\Users\\Jai Patel\\Desktop\\aiSearchVisualizer\\src\\main\\resources\\Adjacencies.txt"
+                "C:\\Users\\GoldH\\IdeaProjects\\aiSearchVisualizer\\src\\main\\resources\\coordinates.csv",
+                "C:\\Users\\GoldH\\IdeaProjects\\aiSearchVisualizer\\src\\main\\resources\\Adjacencies.txt"
         );
 
         // Default algorithm: BFS
