@@ -24,6 +24,17 @@ public class GraphSearchController {
     private final SearchControlsPanel controls = new SearchControlsPanel();
     private Timeline timeline;
 
+    /**
+     * Creates and returns the main UI for graph search visualization and control.
+     * <p>
+     * Sets up the graph visualizer, control panel, and event handlers for all UI controls.
+     * Wires up algorithm selection, start/goal node pickers, play/pause/step/restart buttons,
+     * graph generation, and batch benchmark execution. Also configures the timeline for animation speed.
+     *
+     * @param graph            The initial graph to visualize and search
+     * @param defaultAlgorithm The default search algorithm to use
+     * @return The root BorderPane containing the visualization and controls
+     */
     public BorderPane createUI(Graph graph, SearchAlgorithm defaultAlgorithm) {
         this.graph = graph;
         this.algorithm = defaultAlgorithm;

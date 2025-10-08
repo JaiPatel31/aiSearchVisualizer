@@ -13,13 +13,25 @@ import java.nio.file.Paths;
 import java.util.Objects;
 
 /**
- * Entry point for the AI Search Visualizer.
- * Now supports both loading static graphs and generating random graphs.
+ * Entry point for the AI Search Visualizer application.
+ * <p>
+ * Loads a default static graph from resource files and initializes the UI with a default search algorithm (BFS).
+ * Users can later switch to random graph generation or other algorithms via the UI.
  */
 public class GraphSearchUI extends Application {
 
+    /** The graph currently loaded in the visualizer. */
     private Graph graph;
 
+    /**
+     * JavaFX application entry point. Sets up the main window and UI.
+     * <p>
+     * Loads the default graph from CSV and adjacency files, initializes the default search algorithm,
+     * and attaches the main controller to the UI. Configures the scene and displays the window.
+     *
+     * @param primaryStage The primary stage for this application
+     * @throws Exception If loading resources or initializing the UI fails
+     */
     @Override
     public void start(Stage primaryStage) throws Exception {
         // Load default graph (user can later switch to random mode in UI)
@@ -44,8 +56,12 @@ public class GraphSearchUI extends Application {
         primaryStage.show();
     }
 
+    /**
+     * Main method for launching the JavaFX application.
+     *
+     * @param args Command-line arguments
+     */
     public static void main(String[] args) {
         launch(args);
     }
 }
-

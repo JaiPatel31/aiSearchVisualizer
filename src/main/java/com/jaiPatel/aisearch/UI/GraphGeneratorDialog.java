@@ -4,8 +4,25 @@ import com.jaiPatel.aisearch.graph.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
+/**
+ * Dialog for generating random graphs or grid worlds for visualization and search.
+ * <p>
+ * Provides a JavaFX dialog that allows the user to select graph type (general weighted or grid world),
+ * configure parameters, and generate a new Graph instance using the selected options.
+ * Supports configuration of node count, branching factor, edge weights, grid size, obstacle density,
+ * connectivity, and random seed.
+ */
 public class GraphGeneratorDialog {
 
+    /**
+     * Shows the graph generator dialog and returns the generated Graph.
+     * <p>
+     * The dialog allows the user to select between a general weighted graph and a grid world,
+     * configure relevant parameters, and generate the graph. Returns the generated Graph instance
+     * or null if the dialog is cancelled.
+     *
+     * @return The generated Graph, or null if cancelled
+     */
     public Graph showDialog() {
         Dialog<Void> dialog = new Dialog<>();
         dialog.setTitle("Generate Graph");

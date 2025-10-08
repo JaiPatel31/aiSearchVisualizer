@@ -9,12 +9,28 @@ import org.graphstream.ui.layout.springbox.implementations.LinLog;
 
 import java.util.List;
 
+/**
+ * Visualizes a graph using GraphStream and JavaFX for AI search algorithms.
+ * <p>
+ * Handles node and edge setup, style configuration, and dynamic updates for search visualization.
+ * Supports both grid and general graphs, and provides methods for step-by-step updates and path highlighting.
+ */
 public class GraphStreamVisualizer {
+    /** The AI search graph to visualize. */
     private final Graph aiGraph;
+    /** The underlying GraphStream graph object. */
     private final SingleGraph gsGraph;
+    /** The GraphStream viewer for JavaFX integration. */
     private FxViewer viewer;
+    /** The JavaFX view panel displaying the graph. */
     private FxViewPanel viewPanel;
 
+    /**
+     * Constructs a GraphStreamVisualizer for the given AI search graph.
+     * Sets up nodes, edges, and styles for visualization.
+     *
+     * @param aiGraph The graph to visualize
+     */
     public GraphStreamVisualizer(Graph aiGraph) {
         this.aiGraph = aiGraph;
         this.gsGraph = new SingleGraph("AI Search Graph");
@@ -22,6 +38,10 @@ public class GraphStreamVisualizer {
         setupStyles();
     }
 
+    /**
+     * Adds nodes and edges from the AI graph to the GraphStream graph.
+     * Sets node labels and edge labels for visualization.
+     */
     private void setupNodesAndEdges() {
         for (Node n : aiGraph.getNodes()) {
             org.graphstream.graph.Node gsNode = gsGraph.addNode(n.getName());
@@ -41,7 +61,10 @@ public class GraphStreamVisualizer {
         }
     }
 
-    /** Reset all nodes/edges before a new run */
+    /**
+     * Resets all node and edge styles before a new search run.
+     * Sets default colors and removes any previous class attributes.
+     */
     public void resetGraph() {
         Platform.runLater(() -> {
             for (org.graphstream.graph.Node node : gsGraph) {

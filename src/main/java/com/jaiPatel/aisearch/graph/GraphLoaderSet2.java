@@ -8,10 +8,27 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * Utility class for loading a graph from a CSV file with embedded JSON connections.
+ * <p>
+ * Loads nodes (cities) from a CSV file and edges (roads) from a JSON array in the CSV.
+ * Calculates edge weights using the Haversine formula for geographic distance.
+ */
 public class GraphLoaderSet2 {
 
+    /** Jackson ObjectMapper for parsing JSON connection arrays. */
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    /**
+     * Loads a graph from the given CSV file.
+     * <p>
+     * Reads city coordinates and connections from the CSV file. Each city is added as a node,
+     * and each connection (in JSON format) is added as a bidirectional edge with distance as weight.
+     *
+     * @param filePath Path to the CSV file containing city data and connections
+     * @return The loaded Graph object
+     * @throws IOException If reading the file fails
+     */
     public static Graph load(String filePath) throws IOException {
         Graph graph = new Graph();
         Map<String, Node> nodeMap = new HashMap<>();
@@ -19,7 +36,7 @@ public class GraphLoaderSet2 {
         try (CSVReader reader = new CSVReader(new FileReader(filePath))) {
             List<String[]> rows = reader.readAll();
 
-            // Step 1: Create nodes
+            // Step 1: Create nodes from CSV rows
             for (String[] parts : rows.subList(1, rows.size())) { // skip header
                 if (parts.length < 4) continue;
 
@@ -69,6 +86,15 @@ public class GraphLoaderSet2 {
         return graph;
     }
 
+    /**
+     * Calculates the great-circle distance between two coordinates using the Haversine formula.
+     *
+     * @param lat1 Latitude of the first point
+     * @param lon1 Longitude of the first point
+     * @param lat2 Latitude of the second point
+     * @param lon2 Longitude of the second point
+     * @return Distance in kilometers
+     */
     private static double haversine(double lat1, double lon1, double lat2, double lon2) {
         double R = 6371.0; // Earth radius km
         double dLat = Math.toRadians(lat2 - lat1);

@@ -7,10 +7,27 @@ import com.jaiPatel.aisearch.heuristics.*;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * Command-line application for running AI search algorithms on various graph datasets.
+ * <p>
+ * Allows users to select a graph source (preset or random), choose start and goal nodes,
+ * select a search algorithm, and view search results including path, cost, and metrics.
+ * Supports BFS, DFS, IDDFS, Greedy Best-First Search, and A* algorithms.
+ */
 public class SearchApp {
 
+    /** Scanner for reading user input from the console. */
     private static final Scanner sc = new Scanner(System.in);
 
+    /**
+     * Main entry point for the AI Search Visualizer CLI.
+     * <p>
+     * Prompts the user to select a graph source, loads the graph, allows selection of start/goal nodes,
+     * prompts for algorithm choice, runs the selected search, and displays results.
+     *
+     * @param args Command-line arguments (unused)
+     * @throws Exception If loading files or running the search fails
+     */
     public static void main(String[] args) throws Exception {
         System.out.println("=== AI Search Visualizer CLI ===");
         System.out.println("Choose graph source:");
@@ -116,4 +133,3 @@ public class SearchApp {
         return RandomGraphGenerator.generate(n, b, minW, maxW, seed);
     }
 }
-

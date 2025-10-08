@@ -7,8 +7,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Utility class for loading a graph from city coordinates and adjacency files.
+ * <p>
+ * Loads nodes (cities) from a CSV file and edges (roads) from a text file.
+ * Calculates edge weights using the Haversine formula for geographic distance.
+ */
 public class GraphLoaderSet1 {
 
+    /**
+     * Loads a graph from the given coordinates and adjacencies files.
+     * <p>
+     * Reads city coordinates from a CSV file and roads from a text file.
+     * Each city is added as a node, and each road as a bidirectional edge with distance as weight.
+     *
+     * @param coordinatesFile Path to the CSV file containing city coordinates (name, lat, lon)
+     * @param adjacenciesFile Path to the text file containing city adjacencies (roads)
+     * @return The loaded Graph object
+     * @throws IOException If reading files fails
+     */
     public static Graph load(String coordinatesFile, String adjacenciesFile) throws IOException {
         Graph graph = new Graph();
         Map<String, Node> nodeMap = new HashMap<>();
@@ -62,7 +79,15 @@ public class GraphLoaderSet1 {
         return graph;
     }
 
-    // Haversine formula to calculate distance between two coordinates in km
+    /**
+     * Calculates the great-circle distance between two coordinates using the Haversine formula.
+     *
+     * @param lat1 Latitude of the first point
+     * @param lon1 Longitude of the first point
+     * @param lat2 Latitude of the second point
+     * @param lon2 Longitude of the second point
+     * @return Distance in kilometers
+     */
     private static double haversine(double lat1, double lon1, double lat2, double lon2) {
         final double R = 6371.0; // Earth radius in km
         double dLat = Math.toRadians(lat2 - lat1);
@@ -76,7 +101,3 @@ public class GraphLoaderSet1 {
         return R * c;
     }
 }
-
-
-
-

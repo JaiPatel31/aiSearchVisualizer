@@ -5,34 +5,74 @@ import java.util.*;
 
 /**
  * Iterative Deepening Depth-First Search (IDDFS)
+ * <p>
  * Combines BFS's optimal depth discovery with DFS's low memory footprint.
  * Restarts a depth-limited DFS from the start node each time the limit increases.
+ * <p>
+ * This class provides an incremental search suitable for visualization and benchmarking.
  */
 public class IDDFS extends AbstractSearchAlgorithm {
 
+    /** The graph to search. */
     private Graph graph;
-    private Node start, goal;
+    /** The start node for the search. */
+    private Node start;
+    /** The goal node for the search. */
+    private Node goal;
+    /** Observer to notify during the search. */
     private SearchObserver observer;
 
+    /** Current depth limit for the search. */
     private int currentDepth = 0;
+    /** Maximum allowed depth to prevent infinite loops. */
     private static final int MAX_DEPTH = 1000; // safety cap
-    private boolean finished = false, initialized = false;
+    /** Indicates if the search is finished. */
+    private boolean finished = false;
+    /** Indicates if the search has been initialized. */
+    private boolean initialized = false;
 
+    /** Stack for DFS, storing nodes and their depths. */
     private Deque<NodeDepth> stack;
+    /** Map of nodes to their parent nodes for path reconstruction. */
     private Map<Node, Node> parentMap;
+    /** Set of explored (visited) nodes. */
     private Set<Node> explored;
 
     // Metrics
-    private int maxFrontierSize = 0, maxFootprintSize = 0, nodesGenerated = 0;
-    private long startTime, beforeMem;
+    /** Maximum size of the frontier during the search. */
+    private int maxFrontierSize = 0;
+    /** Maximum combined size of frontier and explored set. */
+    private int maxFootprintSize = 0;
+    /** Number of nodes generated during the search. */
+    private int nodesGenerated = 0;
+    /** Start time of the search (nanoseconds). */
+    private long startTime;
+    /** Memory usage before the search. */
+    private long beforeMem;
 
-    /** Helper structure for stack entries (node + depth) */
+    /**
+     * Helper structure for stack entries (node + depth).
+     */
     private static class NodeDepth {
+        /** The node in the search. */
         final Node node;
+        /** The depth of the node from the start. */
         final int depth;
+        /**
+         * Constructs a NodeDepth instance.
+         * @param n The node.
+         * @param d The depth.
+         */
         NodeDepth(Node n, int d) { node = n; depth = d; }
     }
 
+    /**
+     * Initializes the IDDFS algorithm with the given graph, start and goal nodes, and observer.
+     * @param graph    The graph to search
+     * @param start    The start node
+     * @param goal     The goal node
+     * @param observer The observer to notify during the search
+     */
     @Override
     public void initialize(Graph graph, Node start, Node goal, SearchObserver observer) {
         this.graph = graph;
@@ -175,4 +215,3 @@ public class IDDFS extends AbstractSearchAlgorithm {
         return finished;
     }
 }
-

@@ -75,10 +75,18 @@ public class GridGraphGenerator {
         throw new RuntimeException("Failed to generate solvable grid after " + maxAttempts + " attempts");
     }
 
-    /** Connectivity-aware reachability check */
+    /**
+     * Checks if there is a path from start to goal in the graph, considering connectivity.
+     * <p>
+     * Uses BFS to determine reachability, ignoring blocked attributes.
+     *
+     * @param g        The graph to search
+     * @param start    The start node
+     * @param goal     The goal node
+     * @param diagonal True if diagonal movement is allowed
+     * @return True if goal is reachable from start, false otherwise
+     */
     private static boolean isReachable(Graph g, Node start, Node goal, boolean diagonal) {
-        if (start == null || goal == null) return false;
-
         Queue<Node> q = new LinkedList<>();
         Set<Node> visited = new HashSet<>();
         q.add(start);
@@ -98,6 +106,16 @@ public class GridGraphGenerator {
         return false;
     }
 
+    /**
+     * Checks if there is a valid, unblocked path from start to goal in the graph.
+     * <p>
+     * Uses BFS and respects the 'blocked' attribute on nodes.
+     *
+     * @param g     The graph to search
+     * @param start The start node
+     * @param goal  The goal node
+     * @return True if a valid path exists, false otherwise
+     */
     public static boolean isSolvable(Graph g, Node start, Node goal) {
         Set<Node> visited = new HashSet<>();
         Queue<Node> queue = new LinkedList<>();

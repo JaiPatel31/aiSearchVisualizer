@@ -6,8 +6,22 @@ import javafx.scene.Scene;
 import java.io.*;
 import java.util.*;
 
+/**
+ * Utility class for saving and visualizing benchmark results.
+ * <p>
+ * Provides methods to export benchmark results to CSV and display a bar chart of algorithm runtimes.
+ */
 public class BenchmarkUtils {
 
+    /**
+     * Saves a list of benchmark results to a CSV file.
+     * <p>
+     * The CSV will contain columns for algorithm name, mean runtime, mean memory usage,
+     * nodes expanded/generated, maximum frontier size, solution depth, and path cost.
+     *
+     * @param results  List of benchmark results to save
+     * @param filename Name of the CSV file to write
+     */
     public static void saveResultsToCSV(List<BenchmarkHarness.Result> results, String filename) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(filename))) {
             pw.println("Algorithm,Time(ms),Memory(KB),NodesExpanded,NodesGenerated,FrontierMax,Depth,Cost");
@@ -23,6 +37,13 @@ public class BenchmarkUtils {
         }
     }
 
+    /**
+     * Displays a bar chart comparing mean runtimes of algorithms from benchmark results.
+     * <p>
+     * Each algorithm's mean runtime is shown as a bar. The chart is displayed in a new window.
+     *
+     * @param results List of benchmark results to visualize
+     */
     public static void showResultsChart(List<BenchmarkHarness.Result> results) {
         Map<String, Double> timeMap = new LinkedHashMap<>();
         for (var r : results) timeMap.put(r.algorithm(), r.meanTimeMs());
@@ -48,4 +69,3 @@ public class BenchmarkUtils {
         stage.show();
     }
 }
-

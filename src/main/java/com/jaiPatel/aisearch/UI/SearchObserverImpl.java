@@ -7,18 +7,49 @@ import javafx.application.Platform;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Implementation of SearchObserver for live UI updates in the AI Search Visualizer.
+ * <p>
+ * Updates the graph visualization and control panel metrics in response to search algorithm events.
+ * Handles step-by-step updates and final result display, including path highlighting and metrics.
+ */
 public class SearchObserverImpl implements SearchObserver {
 
+    /** Visualizer for updating the graph display. */
     private final GraphStreamVisualizer visualizer;
+    /** Control panel for updating metrics and UI controls. */
     private final SearchControlsPanel controls;
+    /** The goal node for the current search. */
     private final Node goal;
 
+    /**
+     * Constructs a SearchObserverImpl for UI updates.
+     *
+     * @param visualizer The graph visualizer
+     * @param controls   The control panel for metrics and controls
+     * @param goal       The goal node for the search
+     */
     public SearchObserverImpl(GraphStreamVisualizer visualizer, SearchControlsPanel controls, Node goal) {
         this.visualizer = visualizer;
         this.controls = controls;
         this.goal = goal;
     }
 
+    /**
+     * Called on each search step to update the UI.
+     * <p>
+     * Updates node states, frontier list, and live metrics (nodes expanded, path cost, depth, heuristic values).
+     *
+     * @param current       The current node being expanded
+     * @param frontier      The current frontier (open list)
+     * @param explored      The set of explored nodes
+     * @param nodesExpanded Number of nodes expanded so far
+     * @param pathCost      Cost from start to current node
+     * @param solutionDepth Depth of the current node
+     * @param g             Cost from start to current node
+     * @param h             Heuristic estimate to goal
+     * @param f             Total estimated cost (g + h)
+     */
     @Override
     public void onStep(Node current,
                        Collection<Node> frontier,
@@ -54,6 +85,20 @@ public class SearchObserverImpl implements SearchObserver {
         });
     }
 
+    /**
+     * Called when the search finishes to update the UI with final results.
+     * <p>
+     * Highlights the final path and updates all metrics (nodes expanded, cost, depth, runtime, memory).
+     *
+     * @param path               The solution path
+     * @param totalNodesExpanded Total nodes expanded during the search
+     * @param totalNodesGenerated Total nodes generated during the search
+     * @param maxFrontierSize    Maximum frontier size during the search
+     * @param totalCost          Total cost of the solution path
+     * @param solutionDepth      Depth of the solution path
+     * @param elapsedTimeMs      Elapsed runtime in milliseconds
+     * @param memoryBytes        Memory usage in bytes
+     */
     @Override
     public void onFinish(List<Node> path,
                          int totalNodesExpanded,
@@ -76,4 +121,3 @@ public class SearchObserverImpl implements SearchObserver {
 
     }
 }
-
