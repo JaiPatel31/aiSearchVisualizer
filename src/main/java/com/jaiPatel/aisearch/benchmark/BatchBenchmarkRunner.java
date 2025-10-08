@@ -41,20 +41,23 @@ public class BatchBenchmarkRunner {
 
             for (int run = 1; run <= repeats; run++) {
                 long seed = rand.nextLong();
+                Graph g;
+                Node start, goal;
 
-                Graph g = GridGraphGenerator.generateGrid(
-                        d.size, d.density,
-                        true, true, seed
-                );
+                while (true) {
+                    g = GridGraphGenerator.generateGrid(d.size, d.density, true, true, seed);
+                    List<Node> nodes = new ArrayList<>(g.getNodes());
+                    if (nodes.size() < 2) {
+                        seed = rand.nextLong();
+                        continue;
+                    }
+                    start = nodes.get(0);
+                    goal = nodes.get(nodes.size() - 1);
 
-                List<Node> nodes = new ArrayList<>(g.getNodes());
-                if (nodes.size() < 2) {
-                    System.out.println("⚠️ Skipping run — graph too small or disconnected.");
-                    continue;
+                    if (GridGraphGenerator.isSolvable(g, start, goal)) break;
+                    System.out.println("❌ Unsolvable graph (seed=" + seed + "), regenerating...");
+                    seed = rand.nextLong();
                 }
-
-                Node start = nodes.get(0);
-                Node goal = nodes.get(nodes.size() - 1);
 
                 System.out.println("-- Seed " + seed + " (" + d.label + ") --");
 
