@@ -105,6 +105,7 @@ public class SearchControlsPanel {
         Label benchmarkLabel = new Label("Benchmarking");
         benchmarkLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
 
+
         VBox benchmarkBox = new VBox(10, benchmarkLabel, runBenchmarkButton, benchmarkTable, benchmarkSummaryLabel);
         benchmarkBox.setStyle("-fx-border-color: lightgray; -fx-border-width: 1px; -fx-padding: 10px;");
         benchmarkTable.setPrefHeight(200);

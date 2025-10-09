@@ -5,6 +5,8 @@ import com.jaiPatel.aisearch.benchmark.BatchBenchmarkRunner;
 import com.jaiPatel.aisearch.benchmark.BenchmarkHarness;
 import com.jaiPatel.aisearch.benchmark.BenchmarkUtils;
 import com.jaiPatel.aisearch.graph.Graph;
+import com.jaiPatel.aisearch.graph.GraphLoaderSet1;
+import com.jaiPatel.aisearch.graph.GraphLoaderSet2;
 import com.jaiPatel.aisearch.graph.Node;
 import com.jaiPatel.aisearch.heuristics.*;
 import javafx.animation.KeyFrame;
@@ -14,6 +16,10 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.util.Duration;
+import org.graphstream.ui.fx_viewer.FxViewPanel;
+
+import java.nio.file.Paths;
+import java.util.Objects;
 
 public class GraphSearchController {
 
@@ -177,14 +183,36 @@ public class GraphSearchController {
     }
 
     private void updateGraph(Graph newGraph, BorderPane root) {
+        if (timeline != null) timeline.stop();
+
+        // Dispose old visualizer if it exists
+        if (this.visualizer != null) {
+            this.visualizer.dispose();
+            root.getChildren().remove(this.visualizer.getView());
+            System.out.println("🧹 Disposed old GraphStream viewer.");
+        }
+
+        // Create a new visualizer and view
         this.graph = newGraph;
         this.visualizer = new GraphStreamVisualizer(graph);
-        root.setCenter(visualizer.getView());
-        visualizer.resetGraph();
-        refreshNodePickers();
+        FxViewPanel newView = visualizer.getView();
+        root.setCenter(newView);
+
+        // ✅ Force layout and refresh
+        Platform.runLater(() -> {
+            newView.requestLayout();
+            newView.requestFocus();
+            newView.setVisible(true);
+            System.out.println("🎨 View layout refreshed and visible.");
+        });
+
         controls.resetMetrics();
-        if (timeline != null) timeline.stop();
+        controls.statusLabel.setText("Graph loaded: " + graph.getNodes().size() + " nodes");
+        refreshNodePickers();
+        System.out.println("✅ Graph visualizer refreshed successfully.");
     }
+
+
 
     private void refreshNodePickers() {
         var names = graph.getNodes().stream().map(Node::getName).toList();
@@ -220,5 +248,5 @@ public class GraphSearchController {
             });
         }).start();
     }
+    }
 
-}

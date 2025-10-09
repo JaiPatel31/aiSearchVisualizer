@@ -93,6 +93,12 @@ public class GraphStreamVisualizer {
 
     /** Create a stable view panel */
     public FxViewPanel getView() {
+        if (viewer != null) {
+            try {
+                viewer.close();
+                System.out.println("🗑 Disposed previous GraphStream viewer");
+            } catch (Exception ignored) {}
+        }
         viewer = new FxViewer(gsGraph, FxViewer.ThreadingModel.GRAPH_IN_GUI_THREAD);
         viewPanel = (FxViewPanel) viewer.addDefaultView(false);
         viewPanel.setMinSize(600, 600);
@@ -219,6 +225,16 @@ public class GraphStreamVisualizer {
                     xAttr.doubleValue() + offsetX,
                     yAttr.doubleValue() + offsetY,
                     0);
+        }
+    }
+    public void dispose() {
+        try {
+            if (viewer != null) {
+                viewer.close();
+                System.out.println("🧹 Disposed old GraphStream viewer.");
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Error disposing viewer: " + e.getMessage());
         }
     }
 

@@ -4,6 +4,7 @@ import com.jaiPatel.aisearch.algorithms.BFS;
 import com.jaiPatel.aisearch.algorithms.SearchAlgorithm;
 import com.jaiPatel.aisearch.graph.Graph;
 import com.jaiPatel.aisearch.graph.GraphLoaderSet1;
+import com.jaiPatel.aisearch.graph.GraphLoaderSet2;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;

@@ -30,32 +30,47 @@ public class GraphLoaderSet2 {
      * @throws IOException If reading the file fails
      */
     public static Graph load(String filePath) throws IOException {
+        System.out.println("📂 Starting to load graph from CSV: " + filePath);
         Graph graph = new Graph();
         Map<String, Node> nodeMap = new HashMap<>();
 
         try (CSVReader reader = new CSVReader(new FileReader(filePath))) {
             List<String[]> rows = reader.readAll();
+            System.out.println("🧾 CSV read complete. Total rows (including header): " + rows.size());
 
             // Step 1: Create nodes from CSV rows
+            System.out.println("🪄 Creating nodes...");
             for (String[] parts : rows.subList(1, rows.size())) { // skip header
-                if (parts.length < 4) continue;
+                if (parts.length < 4) {
+                    System.out.println("⚠️ Skipping malformed row (expected >=4 cols): " + Arrays.toString(parts));
+                    continue;
+                }
 
-                String name = parts[0].replace("\"", "").trim(); // remove quotes
+                String name = parts[0].replace("\"", "").trim();
                 double lat = Double.parseDouble(parts[1]);
                 double lon = Double.parseDouble(parts[2]);
 
                 Node node = new Node(name, lat, lon);
                 graph.addNode(node);
                 nodeMap.put(name, node);
+
+                System.out.println("✅ Added node: " + name + " (lat=" + lat + ", lon=" + lon + ")");
             }
 
+            System.out.println("🌍 Total nodes created: " + nodeMap.size());
+
             // Step 2: Create edges from connections JSON
+            System.out.println("🔗 Creating edges from JSON connections...");
+            int edgeCount = 0;
             for (String[] parts : rows.subList(1, rows.size())) {
                 if (parts.length < 4) continue;
 
                 String fromName = parts[0].replace("\"", "").trim();
                 Node from = nodeMap.get(fromName);
-                if (from == null) continue;
+                if (from == null) {
+                    System.out.println("⚠️ Node not found for 'from': " + fromName);
+                    continue;
+                }
 
                 String connectionsJson = parts[3].trim();
                 if (connectionsJson.isEmpty()) continue;
@@ -66,18 +81,29 @@ public class GraphLoaderSet2 {
 
                     for (Map<String, String> conn : connections) {
                         String toName = conn.get("to");
-                        if (toName == null) continue;
+                        if (toName == null) {
+                            System.out.println("⚠️ Missing 'to' field in connection for " + fromName);
+                            continue;
+                        }
                         Node to = nodeMap.get(toName);
-                        if (to == null) continue;
+                        if (to == null) {
+                            System.out.println("⚠️ Skipping edge to missing node: " + toName);
+                            continue;
+                        }
 
                         double dist = haversine(from.getX(), from.getY(), to.getX(), to.getY());
                         graph.addEdge(from, to, dist);
                         graph.addEdge(to, from, dist);
+                        edgeCount += 2;
+
+                        System.out.println("↔️ Connected " + fromName + " <-> " + toName + " (dist=" + String.format("%.2f", dist) + " km)");
                     }
                 } catch (Exception e) {
-                    System.err.println("⚠️ Error parsing connections for " + fromName);
+                    System.err.println("❌ Error parsing connections for " + fromName + ": " + e.getMessage());
                 }
             }
+
+            System.out.println("🔚 Edge creation complete. Total edges: " + edgeCount);
         } catch (CsvException e) {
             throw new RuntimeException(e);
         }
